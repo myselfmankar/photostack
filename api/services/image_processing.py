@@ -1,85 +1,48 @@
+import datetime
 import logging
 import os
-import datetime
-import base64
-from io import BytesIO
-from PIL import Image as PILImage
-import imagehash
 
+import exifread
+from PIL import Image as PILImage
 from pillow_heif import register_heif_opener
 from sqlalchemy.orm import Session
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage
-from typing import List
+
 from .. import crud, schemas
 from ..config import settings
 from ..database import SessionLocal
-import exifread
-
 
 # Register HEIF opener with Pillow
 register_heif_opener()
 
 logger = logging.getLogger(__name__)
 
-# Configure the LangChain Gemini API client
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=settings.GEMINI_API_KEY)
 
 def _convert_to_degrees(value):
-    """Helper function to convert EXIF GPS coordinates to decimal degrees."""
+    """Convert EXIF GPS (degrees, minutes, seconds) rationals to decimal degrees."""
     d = float(value[0].num) / float(value[0].den)
     m = float(value[1].num) / float(value[1].den)
     s = float(value[2].num) / float(value[2].den)
-        
     return d + (m / 60.0) + (s / 3600.0)
 
-def _convert_image_to_base64(filepath: str) -> str:
-    """
-    Converts an image file to a base64 string.
-    If the image is HEIC/HEIF, it converts it to JPEG in memory first.
-    """
-    try:
-        if filepath.lower().endswith(('.heic', '.heif')):
-            img = PILImage.open(filepath)
-            buffered = BytesIO()
-            img.save(buffered, format="JPEG")
-            return base64.b64encode(buffered.getvalue()).decode("utf-8")
-        else:
-            with open(filepath, "rb") as image_file:
-                return base64.b64encode(image_file.read()).decode("utf-8")
-    except Exception as e:
-        logger.error(f"Error converting image to base64: {e}")
-        raise
 
-def generate_image_tags_sync(filepath: str) -> List[str]:
+def image_fingerprint(img: PILImage.Image) -> str:
+    """64-bit difference hash (dHash): shrink to 9x8 grayscale, compare neighbours.
+
+    Visually identical images (resized, re-encoded) get the same hash, which is
+    what duplicate detection groups on.
     """
-    Generates descriptive tags for an image using Google's Gemini 1.5 Pro Vision model.
-    """
-    try:
-        logger.info(f"Generating tags for {filepath} using Gemini model.")
-        img_base64 = _convert_image_to_base64(filepath)
-        prompt_message = HumanMessage(
-            content=[
-                {
-                    "type": "text",
-                    "text": "Describe this image with a comma-separated list of relevant tags. Focus on objects, scenes, actions, and general themes. Example: 'beach, sunset, person, ocean, warm colors'."
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}
-                },
-            ]
-        )
-        response = llm.invoke([prompt_message])
-        
-        # Extract and clean tags from the response
-        tags_raw = response.content.strip()
-        tags = [tag.strip().lower() for tag in tags_raw.split(',') if tag.strip()]
-        logger.debug(f"Generated tags for {filepath}: {tags}")
-        return tags
-    except Exception as e:
-        logger.error(f"Error generating tags for {filepath}: {e}", exc_info=True)
-        return []
+    small = img.convert("L").resize((9, 8), PILImage.Resampling.LANCZOS)
+    px = list(small.getdata())
+    bits = 0
+    for row in range(8):
+        for col in range(8):
+            bits = (bits << 1) | (px[row * 9 + col] > px[row * 9 + col + 1])
+    return f"{bits:016x}"
+
+
+def generate_image_tags_sync(filepath: str) -> list[str]:
+    """AI tagging is disabled until the optional tagger lands (restructure step 6)."""
+    return []
 
 
 def _get_date_taken(tags):
@@ -136,7 +99,7 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
             image_size = os.path.getsize(filepath)
             
             # Generate pHash
-            phash = str(imagehash.phash(img))
+            phash = image_fingerprint(img)
 
             # 1. Generate Thumbnail (WebP)
             thumb_filename = f"{base_filename}.webp"

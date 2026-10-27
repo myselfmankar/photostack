@@ -3,3 +3,8 @@
 Gemini.md
 ref
 __pycache__/
+.venv/
+*.db
+*.log
+.pytest_cache/
+.ruff_cache/

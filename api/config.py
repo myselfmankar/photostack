@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings(BaseSettings):
-    DATABASE_URL: str
-    GEMINI_API_KEY: str
+    DATABASE_URL: str = "sqlite:///./photostack.db"
+    GEMINI_API_KEY: str | None = None  # AI features are disabled when unset
     API_BASE_URL: str = "http://localhost:8000/api/v1"
     UPLOADS_DIR: str = "uploads"
     THUMBNAILS_DIR: str = "uploads/thumbnails"
