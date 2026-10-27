@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import crud, storage
 from .database import Base, SessionLocal, engine
-from .routers import albums, batch, duplicates, filters, images, map, search, stats, suggestions
+from .routers import albums, batch, duplicates, filters, images, map, search, stats
 from .services import geocoding, image_processing
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="PhotoStack", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-for module in (images, albums, map, stats, suggestions, filters, search, batch, duplicates):
+for module in (images, albums, map, stats, filters, search, batch, duplicates):
     app.include_router(module.router)
 
 app.mount(storage.URL_PREFIX, StaticFiles(directory=storage.ROOT), name="uploads")

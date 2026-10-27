@@ -15,7 +15,6 @@ const QUERY_KEYS = {
   dates: () => ['filters', 'dates'],
   map: () => ['map', 'data'],
   stats: () => ['stats'],
-  suggestions: () => ['suggestions'],
   image: (id: number) => ['image', id],
   duplicates: () => ['duplicates'],
 };
@@ -68,10 +67,10 @@ export const useToggleFavorite = () => {
   });
 };
 
-export const useSearchAI = (query: string, enabled: boolean = false) => {
+export const useSearch = (query: string, enabled: boolean = false) => {
   return useQuery({
     queryKey: QUERY_KEYS.search(query),
-    queryFn: () => apiClient.search.ai(query),
+    queryFn: () => apiClient.search.query(query),
     enabled: enabled && query.length > 0,
   });
 };
@@ -122,21 +121,6 @@ export const useStats = () => {
   return useQuery({
     queryKey: QUERY_KEYS.stats(),
     queryFn: () => apiClient.stats.get(),
-  });
-};
-
-export const useAlbumSuggestions = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.suggestions(),
-    queryFn: () => apiClient.suggestions.albums(),
-  });
-};
-
-export const useSearchSuggestions = () => {
-  return useQuery({
-    queryKey: ['search', 'suggestions'],
-    queryFn: () => apiClient.suggestions.search(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 };
 

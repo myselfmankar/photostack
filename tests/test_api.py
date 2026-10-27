@@ -109,8 +109,14 @@ def test_map_and_stats(client, library):
     assert stats["total_images"] >= 3
 
 
-def test_search_without_ai_key_does_not_crash(client, library):
-    assert client.post("/api/v1/search/ai", json={"query": "beach"}).status_code == 200
+def test_search(client, library):
+    def found(q):
+        return {i["filename"] for i in client.get("/api/v1/search", params={"q": q}).json()}
+
+    assert found("testcam") == {"geo.jpg", "geo_copy.jpg"}
+    assert found("photos of plain") == {"plain.jpg"}  # stop words ignored
+    assert found("testcam plain") == set()  # every word must match
+    assert found("the") == set()
 
 
 def test_delete_removes_row_and_files(client, upload):

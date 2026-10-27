@@ -6,7 +6,6 @@ import {
     Heart,
     Search,
     BarChart3,
-    Sparkles,
     Copy, // Added Copy icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,7 +21,6 @@ export function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
         { icon: Copy, label: 'Duplicates', href: '/duplicates' }, // Added Duplicates
         { icon: Search, label: 'Search', href: '/search' },
         { icon: BarChart3, label: 'Stats', href: '/stats' },
-        { icon: Sparkles, label: 'Suggestions', href: '/suggestions' },
     ];
 
     return (

@@ -1,4 +1,4 @@
-import { Image, AIQuery, AlbumSummary, Stats, MapMarker } from '@/types';
+import { Image, AlbumSummary, Stats, MapMarker } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -163,14 +163,8 @@ export const apiClient = {
   },
 
   search: {
-    ai: (query: string) =>
-      apiClient.request<Image[]>(
-        '/api/v1/search/ai',
-        {
-          method: 'POST',
-          body: JSON.stringify({ query } as AIQuery),
-        }
-      ),
+    query: (q: string) =>
+      apiClient.request<Image[]>(`/api/v1/search?q=${encodeURIComponent(q)}`),
   },
 
   filters: {
@@ -194,13 +188,6 @@ export const apiClient = {
       apiClient.request<Stats>('/api/v1/dashboard-stats'),
   },
 
-  suggestions: {
-    albums: () =>
-      apiClient.request<string[]>('/api/v1/assist/albums'),
-
-    search: () =>
-      apiClient.request<string[]>('/api/v1/assist/search-terms'),
-  },
 
   batch: {
     deleteImages: (imageIds: number[]) =>

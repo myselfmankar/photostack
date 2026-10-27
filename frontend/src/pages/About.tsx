@@ -4,7 +4,7 @@ export function About() {
             <div className="mb-8">
                 <h1 className="text-3xl font-semibold">About PhotoVault</h1>
                 <p className="text-neutral-400 mt-1">
-                    AI-Powered Digital Asset Management System
+                    Self-hosted photo library
                 </p>
             </div>
 
@@ -13,17 +13,16 @@ export function About() {
                     <h2 className="text-xl font-semibold mb-3">Overview</h2>
                     <p className="leading-relaxed">
                         PhotoVault is an intelligent digital asset management system that helps you
-                        organize, search, and manage your photo collection using AI-powered features.
+                        organize, search, and manage your photo collection with automatic metadata indexing.
                     </p>
                 </section>
 
                 <section>
                     <h2 className="text-xl font-semibold mb-3">Key Features</h2>
                     <ul className="list-disc list-inside space-y-2 leading-relaxed">
-                        <li>AI-powered natural language search</li>
+                        <li>Search by place, camera, tag, or filename</li>
                         <li>Automatic EXIF metadata extraction</li>
                         <li>Reverse geocoding for location data</li>
-                        <li>Smart album suggestions</li>
                         <li>Interactive map view for geotagged photos</li>
                         <li>Advanced filtering and sorting</li>
                         <li>HEIC/HEIF support with automatic conversion</li>
@@ -47,7 +46,6 @@ export function About() {
                             <ul className="text-sm text-neutral-400 space-y-1">
                                 <li>FastAPI (Python)</li>
                                 <li>SQLAlchemy</li>
-                                <li>Google Gemini AI</li>
                                 <li>Pillow (Image Processing)</li>
                             </ul>
                         </div>

@@ -10,8 +10,6 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useSearchSuggestions } from '@/hooks/useApi';
 import { AnimatedMoreButton } from './AnimatedMoreButton';
 
 interface TopBarProps {
@@ -22,10 +20,6 @@ interface TopBarProps {
 export function TopBar({ onMenuClick, showMenuButton }: TopBarProps) {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-    // Fetch AI-powered search suggestions from backend
-    const { data: aiSuggestions, isLoading: suggestionsLoading } = useSearchSuggestions();
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,18 +27,6 @@ export function TopBar({ onMenuClick, showMenuButton }: TopBarProps) {
             navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
         }
     };
-
-    // Fallback suggestions if backend fails or is loading
-    const fallbackSuggestions = [
-        "Photos of cats in a sunbeam",
-        "Beach sunsets from last summer",
-        "Pictures of my car",
-        "Best food photos from 2023",
-    ];
-
-    const displaySuggestions = aiSuggestions && aiSuggestions.length > 0
-        ? aiSuggestions
-        : fallbackSuggestions;
 
     return (
         <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/80 z-40">
@@ -60,46 +42,18 @@ export function TopBar({ onMenuClick, showMenuButton }: TopBarProps) {
                     </Button>
                 )}
 
-                {/* Search Bar */}
-                <Popover open={isSearchFocused} onOpenChange={setIsSearchFocused}>
-                    <PopoverTrigger asChild>
-                        <form onSubmit={handleSearch} className="flex-1 max-w-3xl">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-500" />
-                                <Input
-                                    type="text"
-                                    placeholder="Search with AI... (e.g., 'sunset photos from last summer')"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onFocus={() => setIsSearchFocused(true)}
-                                    onBlur={() => setIsSearchFocused(false)}
-                                    className="pl-10 bg-neutral-900 border-neutral-800 focus:border-neutral-700 h-10 w-full"
-                                />
-                            </div>
-                        </form>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] bg-neutral-900 border-neutral-800 text-white mt-2">
-                        <div className="p-2">
-                            <h4 className="text-sm font-semibold text-neutral-400 mb-2">
-                                {suggestionsLoading ? 'Loading suggestions...' : 'AI Suggestions'}
-                            </h4>
-                            <ul className="space-y-1">
-                                {displaySuggestions.map((suggestion, index) => (
-                                    <li
-                                        key={index}
-                                        className="text-sm text-neutral-300 hover:bg-neutral-800 p-2 rounded cursor-pointer"
-                                        onMouseDown={() => {
-                                            setSearchQuery(suggestion);
-                                            navigate(`/search?q=${encodeURIComponent(suggestion)}`);
-                                        }}
-                                    >
-                                        {suggestion}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </PopoverContent>
-                </Popover>
+                <form onSubmit={handleSearch} className="flex-1 max-w-3xl">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-500" />
+                        <Input
+                            type="search"
+                            placeholder="Search by place, camera, tag, or filename"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 bg-neutral-900 border-neutral-800 focus:border-neutral-700 h-10 w-full"
+                        />
+                    </div>
+                </form>
                 {/* Right Menu */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

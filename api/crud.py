@@ -5,81 +5,42 @@ from typing import List, Optional
 import datetime
 import calendar
 
-def search_images_by_filters(db: Session, filters: schemas.SearchQuery):
-    """
-    Searches for images using a combination of structured filters from the AI.
-    """
-    query = db.query(models.Image).options(joinedload(models.Image.tags), joinedload(models.Image.details).joinedload(models.Metadata.location))
-    
-    # We join details for most filters, so let's do it upfront if needed
-    needs_details_join = filters.location or filters.camera_model or filters.date_query
-    if needs_details_join:
-        query = query.join(models.Image.details)
+STOP_WORDS = {"in", "and", "the", "of", "show", "me", "find", "pictures", "images",
+              "photos", "my", "from", "taken", "a", "with"}
 
-    if filters.tags:
-        query = query.join(models.Image.tags).filter(models.Tag.name.in_(filters.tags))
-    
-    if filters.location:
-        query = query.join(models.Metadata.location).filter(models.Location.address.ilike(f'%{filters.location}%'))
-        
-    if filters.camera_model:
-        query = query.filter(models.Metadata.camera_model.ilike(f'%{filters.camera_model}%'))
-        
-    if filters.date_query:
-        date_str = filters.date_query
-        if " to " in date_str:
-            start_date_str, end_date_str = date_str.split(" to ")
-            start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
-            end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d")
-            query = query.filter(models.Metadata.date_taken.between(start_date, end_date))
-        else:
-            search_date = datetime.datetime.strptime(date_str, "%Y-%m-%d")
-            query = query.filter(func.date(models.Metadata.date_taken) == search_date.date())
 
-    return query.distinct().all()
+def search_images(db: Session, q: str, limit: int = 100):
+    """Keyword search. Every word must match the filename, a tag, the camera, or the address.
 
-def search_images_by_keywords(db: Session, query: str):
+    Uses EXISTS subqueries (.any/.has) instead of joins so results have no duplicates.
     """
-    Performs a broad keyword search across tags and locations.
-    """
-    # Simple stop-word removal
-    stop_words = {"in", "and", "the", "of", "show", "me", "find", "pictures", "images", "photos", "my", "from", "taken"}
-    keywords = [word for word in query.lower().split() if word not in stop_words]
-    
-    if not keywords:
+    words = [w for w in q.lower().split() if w not in STOP_WORDS]
+    if not words:
         return []
 
-    search_query = db.query(models.Image).options(joinedload(models.Image.tags), joinedload(models.Image.details).joinedload(models.Metadata.location))
-    
-    # Build a list of OR conditions
-    conditions = []
-    for keyword in keywords:
-        conditions.append(models.Tag.name.ilike(f'%{keyword}%'))
-        conditions.append(models.Location.address.ilike(f'%{keyword}%'))
-        
-    search_query = search_query.join(models.Image.tags).outerjoin(models.Image.details).outerjoin(models.Metadata.location)
-    search_query = search_query.filter(or_(*conditions))
-
-    return search_query.distinct().all()
+    query = db.query(models.Image).options(
+        joinedload(models.Image.tags),
+        joinedload(models.Image.details).joinedload(models.Metadata.location),
+    )
+    for word in words:
+        like = f"%{word}%"
+        query = query.filter(
+            or_(
+                models.Image.filename.ilike(like),
+                models.Image.tags.any(models.Tag.name.ilike(like)),
+                models.Image.details.has(models.Metadata.camera_model.ilike(like)),
+                models.Image.details.has(
+                    models.Metadata.location.has(models.Location.address.ilike(like))
+                ),
+            )
+        )
+    return query.order_by(models.Image.upload_date.desc()).limit(limit).all()
 
 
 # --- Tag CRUD ---
 def get_tag_by_name(db: Session, name: str):
     return db.query(models.Tag).filter(models.Tag.name == name).first()
 
-def get_tag_counts(db: Session, limit: int = 20):
-    """
-    Gets a list of tags and the count of images associated with each,
-    ordered by the most common tags.
-    """
-    return (
-        db.query(models.Tag.name, func.count(models.Image.id).label("image_count"))
-        .join(models.Tag.images)
-        .group_by(models.Tag.name)
-        .order_by(func.count(models.Image.id).desc())
-        .limit(limit)
-        .all()
-    )
 # --- Album CRUD ---
 
 def get_album(db: Session, album_id: int):

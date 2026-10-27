@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useImage, useToggleFavorite, useDeleteImage, useSearchAI } from '@/hooks/useApi';
+import { useImage, useToggleFavorite, useDeleteImage, useSearch } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,9 +23,9 @@ export function ImageDetail() {
     const deleteMutation = useDeleteImage();
     const favoriteMutation = useToggleFavorite();
 
-    // Fetch related images based on tags
-    const tagsString = image?.tags.map(t => t.name).join(' ') || '';
-    const { data: relatedImages } = useSearchAI(tagsString, !!tagsString);
+    // Related photos: others sharing this photo's first tag
+    const firstTag = image?.tags[0]?.name ?? '';
+    const { data: relatedImages } = useSearch(firstTag, !!firstTag);
 
     const handleDelete = async () => {
         try {

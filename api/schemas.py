@@ -120,14 +120,3 @@ class Image(ImageBase):
         from_attributes = True
 
 Album.model_rebuild()
-
-# --- Search Schemas ---
-class SearchQuery(BaseModel):
-    """
-    A structured representation of a user's natural language search query.
-    The AI model will populate the fields of this model based on the user's input.
-    """
-    tags: Optional[List[str]] = None
-    location: Optional[str] = None
-    camera_model: Optional[str] = None
-    date_query: Optional[str] = None

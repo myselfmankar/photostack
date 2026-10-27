@@ -8,7 +8,6 @@ import { Favorites } from '@/pages/Favorites';
 import { Search } from '@/pages/Search';
 import { Upload } from '@/pages/Upload';
 import { Stats } from '@/pages/Stats';
-import { Suggestions } from '@/pages/Suggestions';
 import { About } from '@/pages/About';
 import { ImageDetail } from '@/pages/ImageDetail';
 import { Duplicates } from '@/pages/Duplicates';
@@ -58,10 +57,6 @@ export const router = createBrowserRouter([
       {
         path: 'stats',
         element: <Stats />,
-      },
-      {
-        path: 'suggestions',
-        element: <Suggestions />,
       },
       {
         path: 'about',

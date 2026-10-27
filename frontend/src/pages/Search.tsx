@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useSearchAI, useToggleFavorite, useDeleteImage } from '@/hooks/useApi';
+import { useSearch, useToggleFavorite, useDeleteImage } from '@/hooks/useApi';
 import { ImageCard } from '@/components/ImageCard';
 import { MasonryGrid } from '@/components/MasonryGrid';
 import { ImageSkeletonGrid } from '@/components/ImageSkeleton';
@@ -30,7 +30,7 @@ export function Search() {
     }
   }, [searchParams]);
 
-  const { data: results, isLoading, isFetching } = useSearchAI(
+  const { data: results, isLoading, isFetching } = useSearch(
     searchQuery,
     searchQuery.length > 0
   );

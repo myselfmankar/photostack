@@ -46,9 +46,6 @@ export interface Image {
   status: 'processing' | 'ready' | 'error';
 }
 
-export interface AIQuery {
-  query: string;
-}
 
 export interface AlbumSummary {
   year: number;
