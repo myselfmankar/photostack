@@ -7,9 +7,9 @@ from PIL import Image as PILImage
 from pillow_heif import register_heif_opener
 from sqlalchemy.orm import Session
 
-from .. import crud, schemas
-from ..config import settings
+from .. import crud, schemas, storage
 from ..database import SessionLocal
+from . import geocoding
 
 # Register HEIF opener with Pillow
 register_heif_opener()
@@ -63,6 +63,8 @@ def process_image_background(filepath: str, image_id: int):
     db = SessionLocal()
     try:
         process_and_save_image_metadata_sync(filepath, image_id, db)
+        # New uploads get their address right away, not only at the next startup.
+        geocoding.reverse_geocode_missing_addresses(db)
     finally:
         db.close()
 
@@ -75,8 +77,7 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
     
     try:
         filename = os.path.basename(filepath)
-        is_heic = filename.lower().endswith(('.heic', '.heif'))
-        base_filename = os.path.splitext(filename)[0]
+        is_heic = storage.needs_preview(filename)
 
         # --- AI Tag Generation ---
         # We do this first or in parallel ideally, but serial is fine.
@@ -102,9 +103,8 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
             phash = image_fingerprint(img)
 
             # 1. Generate Thumbnail (WebP)
-            thumb_filename = f"{base_filename}.webp"
-            thumb_path = os.path.join(settings.THUMBNAILS_DIR, thumb_filename)
-            if not os.path.exists(thumb_path):
+            thumb_path = storage.thumbnail_path(filename)
+            if not thumb_path.exists():
                 try:
                     logger.info(f"Creating thumbnail for {filename}")
                     img_thumb = img.copy()
@@ -116,11 +116,8 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
             # 2. Generate Preview for HEIC (WebP)
             # Standard browsers can't show HEIC, so we need a full-size (or large) preview.
             if is_heic:
-                preview_dir = os.path.join("uploads", "previews")
-                os.makedirs(preview_dir, exist_ok=True)
-                preview_path = os.path.join(preview_dir, f"{base_filename}.webp")
-                
-                if not os.path.exists(preview_path):
+                preview_path = storage.preview_path(filename)
+                if not preview_path.exists():
                     try:
                         logger.info(f"Creating preview for HEIC image {filename}")
                         # Max dimension 1920 to save space but keep quality

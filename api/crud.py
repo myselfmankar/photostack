@@ -1,10 +1,9 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import extract, func, or_
-from . import models, schemas
+from . import models, schemas, storage
 from typing import List, Optional
 import datetime
 import calendar
-import os
 
 def search_images_by_filters(db: Session, filters: schemas.SearchQuery):
     """
@@ -259,60 +258,18 @@ def update_image_with_metadata(db: Session, image_id: int, image_update: schemas
 
 
 def delete_image(db: Session, image_id: int) -> bool:
-    """
-    Deletes a single image and its associated files from the database and disk.
-    Returns True if successful, False if image not found.
-    """
-    db_image = db.query(models.Image).filter(models.Image.id == image_id).first()
-    if not db_image:
-        return False
-    
-    # Delete files from disk
-    try:
-        if db_image.filepath and os.path.exists(db_image.filepath):
-            os.remove(db_image.filepath)
-        thumb_path = os.path.join("uploads/thumbnails", os.path.splitext(db_image.filename)[0] + ".webp")
-        if os.path.exists(thumb_path):
-            os.remove(thumb_path)
-        # Delete medium and large size previews if they exist
-        medium_path = os.path.join("uploads/previews", os.path.splitext(db_image.filename)[0] + ".webp")
-        if os.path.exists(medium_path):
-            os.remove(medium_path)
-    except Exception as e:
-        print(f"Error deleting files for image ID {image_id}: {e}")
-    
-    # Delete from database
-    db.delete(db_image)
-    db.commit()
-    return True
+    """Delete an image row and its files. Returns False if it doesn't exist."""
+    return batch_delete_images(db, [image_id]) == 1
+
 
 def batch_delete_images(db: Session, image_ids: List[int]) -> int:
-    """
-    Deletes multiple images and their associated files from the database and disk.
-    """
-    deleted_count = 0
-    for image_id in image_ids:
-        db_image = db.query(models.Image).filter(models.Image.id == image_id).first()
-        if db_image:
-            # Delete files from disk
-            try:
-                if db_image.filepath and os.path.exists(db_image.filepath):
-                    os.remove(db_image.filepath)
-                thumb_path = os.path.join("uploads/thumbnails", os.path.splitext(db_image.filename)[0] + ".webp")
-                if os.path.exists(thumb_path):
-                    os.remove(thumb_path)
-                # Delete medium and large size previews if they exist
-                medium_path = os.path.join("uploads/previews", os.path.splitext(db_image.filename)[0] + ".webp")
-                if os.path.exists(medium_path):
-                    os.remove(medium_path)
-
-            except Exception as e:
-                print(f"Error deleting files for image ID {image_id}: {e}")
-
-            db.delete(db_image)
-            deleted_count += 1
+    """Delete image rows and their files; returns how many existed."""
+    images = db.query(models.Image).filter(models.Image.id.in_(image_ids)).all()
+    for db_image in images:
+        storage.delete_files(db_image.filename)
+        db.delete(db_image)
     db.commit()
-    return deleted_count
+    return len(images)
 
 def batch_toggle_favorite_status(db: Session, image_ids: List[int]) -> List[models.Image]:
     """
@@ -418,7 +375,7 @@ def get_album_summary(db: Session) -> List[dict]:
             "month": r.month,
             "month_name": calendar.month_name[int(r.month)],
             "image_count": r.image_count,
-            "preview_image_url": f"/uploads/thumbnails/{os.path.splitext(r.preview_image_filename)[0]}.webp"
+            "preview_image_url": storage.thumbnail_url(r.preview_image_filename)
         }
         for r in result
     ]
@@ -466,7 +423,7 @@ def get_map_data(db: Session):
             "latitude": img.details.location.latitude,
             "longitude": img.details.location.longitude,
             "address": img.details.location.address,
-            "thumbnail_url": f"/uploads/thumbnails/{os.path.splitext(img.filename)[0]}.webp",
+            "thumbnail_url": storage.thumbnail_url(img.filename),
             "filename": img.filename
         }
         for img in images

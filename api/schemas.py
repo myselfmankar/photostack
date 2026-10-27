@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
+
+from . import storage
 from typing import Optional, List, Dict, Any
 import datetime
 
@@ -96,11 +98,23 @@ class Image(ImageBase):
     tags: List[Tag] = []
     albums: List[AlbumBase] = []
     is_favorite: bool = False
-    thumbnail_url: Optional[str] = None
-    medium_url: Optional[str] = None
-    large_url: Optional[str] = None
     status: str = "processing"
     phash: Optional[str] = None
+
+    @computed_field
+    @property
+    def thumbnail_url(self) -> str:
+        return storage.thumbnail_url(self.filename)
+
+    @computed_field
+    @property
+    def medium_url(self) -> str:
+        return storage.display_url(self.filename)
+
+    @computed_field
+    @property
+    def large_url(self) -> str:
+        return storage.display_url(self.filename)
 
     class Config:
         from_attributes = True

@@ -1,6 +1,5 @@
 """Characterization tests: they pin down what the API does *today*, so the
-restructure can't silently change behavior. Known bugs are marked xfail(strict),
-so fixing one makes its test fail until the marker is removed.
+restructure can't silently change behavior.
 """
 
 import os
@@ -69,10 +68,19 @@ def test_favorite_toggle(client, library):
     assert client.post(f"/api/v1/images/{img_id}/favorite").json()["is_favorite"] is False
 
 
-@pytest.mark.xfail(strict=True, reason="bug: router calls missing crud.get_image_urls")
 def test_batch_favorite(client, library):
-    res = client.post("/api/v1/batch/images/favorite", json=[library["plain"]["id"]])
+    ids = [library["plain"]["id"]]
+    res = client.post("/api/v1/batch/images/favorite", json=ids)
     assert res.status_code == 200
+    assert res.json()[0]["is_favorite"] is True
+    client.post("/api/v1/batch/images/favorite", json=ids)  # toggle back
+
+
+def test_batch_delete(client, upload):
+    img = upload("batch_temp.jpg", make_jpeg(color=(9, 9, 9)))
+    res = client.post("/api/v1/batch/images/delete", json=[img["id"]])
+    assert res.status_code == 204
+    assert not os.path.exists("uploads/batch_temp.jpg")
 
 
 def test_duplicates(client, library):

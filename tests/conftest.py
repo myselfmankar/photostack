@@ -21,6 +21,7 @@ def workdir(tmp_path_factory) -> Path:
     os.chdir(path)
     os.environ["DATABASE_URL"] = f"sqlite:///{path / 'test.db'}"
     os.environ.pop("GEMINI_API_KEY", None)
+    os.environ["GEOCODING_ENABLED"] = "false"  # no network calls in tests
     sys.path.insert(0, str(REPO_ROOT))
     return path
 

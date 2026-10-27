@@ -202,11 +202,6 @@ export const apiClient = {
       apiClient.request<string[]>('/api/v1/assist/search-terms'),
   },
 
-  config: {
-    get: () =>
-      apiClient.request<{ api_url: string }>('/api/v1/config'),
-  },
-
   batch: {
     deleteImages: (imageIds: number[]) =>
       apiClient.request(
