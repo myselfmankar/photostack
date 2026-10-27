@@ -1,24 +1,15 @@
-FROM python:3.10-slim-bookworm
+FROM python:3.12-slim-bookworm
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /bin/uv
 
 WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1
 
-# Set environment
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# Install dependencies first so this layer is cached between code changes.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --extra postgres
 
-# Install dependencies
-COPY requirements.txt ./
-RUN pip install uv
-RUN uv pip install --no-cache-dir -r requirements.txt --system
-
-# Copy project
-COPY . .
-
-# Ensure folders for uploads and thumbnails
-RUN mkdir -p /app/uploads /app/uploads/thumbnails && \
-    chmod -R 755 /app/uploads
+COPY api ./api
+RUN mkdir -p uploads/thumbnails uploads/previews
 
 EXPOSE 8000
-
-# Use uvicorn to run the FastAPI app. Remove --reload in production.
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["/app/.venv/bin/uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
