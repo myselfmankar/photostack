@@ -105,7 +105,7 @@ failed before.
 | `photostack/config.py` | Settings from environment variables / `.env`. |
 | `photostack/models.py` | Database tables (SQLAlchemy 2.0). |
 | `photostack/schemas.py` | API response and request shapes (Pydantic). |
-| `photostack/crud.py` | All queries: list/filter/search, albums, duplicates, stats. |
+| `photostack/crud.py` | All queries: list/filter/search, albums, duplicates, library health (`ISSUES`). |
 | `photostack/indexer.py` | Reading a photo and storing what's in it. |
 | `photostack/video.py` | ffprobe/ffmpeg calls for video metadata and thumbnails. |
 | `photostack/integrity.py` | Byte-level checks used at upload and index time. |
