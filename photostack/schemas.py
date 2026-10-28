@@ -1,8 +1,9 @@
 """Shapes of API responses and request bodies (Pydantic)."""
 
 import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, StringConstraints, computed_field
 
 from . import storage
 
@@ -14,8 +15,18 @@ class Tag(BaseModel):
     name: str
 
 
+AlbumName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
 class AlbumCreate(BaseModel):
-    name: str
+    name: AlbumName
+    description: str | None = None
+
+
+class AlbumUpdate(BaseModel):
+    """PATCH body: only the fields that are sent get changed."""
+
+    name: AlbumName | None = None
     description: str | None = None
 
 
@@ -67,5 +78,14 @@ class Image(BaseModel):
         return storage.display_url(self.filename)
 
 
+class AlbumSummary(AlbumRef):
+    """An album in the albums list: no photos, just a count and a cover."""
+
+    created_at: datetime.datetime
+    image_count: int
+    cover_url: str | None
+
+
 class Album(AlbumRef):
+    created_at: datetime.datetime
     images: list[Image] = []

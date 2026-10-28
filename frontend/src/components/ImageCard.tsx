@@ -15,6 +15,8 @@ interface ImageCardProps {
   onClick?: () => void;
   onFavoriteToggle?: (id: number) => void;
   onDelete?: (id: number) => void;
+  /** Label for the menu action that calls onDelete. */
+  deleteLabel?: string;
   isFavorite?: boolean;
   isLoading?: boolean;
   className?: string;
@@ -28,6 +30,7 @@ export function ImageCard({
   onClick,
   onFavoriteToggle,
   onDelete,
+  deleteLabel = 'Delete',
   isFavorite = false,
   isLoading = false,
   className,
@@ -111,6 +114,7 @@ export function ImageCard({
             />
           </Button>
 
+          {onDelete && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -126,14 +130,15 @@ export function ImageCard({
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDelete?.(image.id);
+                  onDelete(image.id);
                 }}
                 className="text-red-500"
               >
-                Delete
+                {deleteLabel}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
       </div>
 

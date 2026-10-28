@@ -23,7 +23,7 @@ export function AlbumDetail() {
 
     const { data: images, isLoading } = useQuery<ImageType[]>({
         queryKey: ['albums', year, month],
-        queryFn: () => apiClient.albums.getImages(Number(year), Number(month)),
+        queryFn: () => apiClient.albums.monthImages(Number(year), Number(month)),
         enabled: !!year && !!month,
     });
 

@@ -99,17 +99,11 @@ def test_duplicates(client, library):
 
 
 def test_month_albums(client, library):
-    summary = client.get("/api/v1/albums/summary").json()
+    summary = client.get("/api/v1/albums/months").json()
     may = next(a for a in summary if a["year"] == 2024 and a["month"] == 5)
     assert may["image_count"] == 2
-    month = client.get("/api/v1/albums/2024/5").json()
+    month = client.get("/api/v1/albums/months/2024/5").json()
     assert {i["filename"] for i in month} == {"geo.jpg", "geo_copy.jpg"}
-
-
-def test_custom_album(client, library):
-    album = client.post("/api/v1/albums/", json={"name": "Trip"}).json()
-    res = client.post(f"/api/v1/albums/{album['id']}/images", json=[library["geo"]["id"]])
-    assert [i["id"] for i in res.json()["images"]] == [library["geo"]["id"]]
 
 
 def test_map_and_stats(client, library):

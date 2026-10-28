@@ -8,7 +8,8 @@ import { FilterPanel, FilterState } from '@/components/FilterPanel';
 import { Image as ImageType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Grid3x3, List, SlidersHorizontal, SquareStack, Heart, Trash2, CheckSquare } from 'lucide-react';
+import { Grid3x3, List, SlidersHorizontal, SquareStack, Heart, Trash2, CheckSquare, FolderPlus } from 'lucide-react';
+import { AddToAlbumDialog } from '@/components/AddToAlbumDialog';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/query-client';
 
@@ -26,6 +27,7 @@ export function Gallery() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedImages, setSelectedImages] = useState<Set<number>>(new Set());
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
+  const [showAddToAlbum, setShowAddToAlbum] = useState(false);
 
   const { toast } = useToast();
 
@@ -306,6 +308,15 @@ export function Gallery() {
                   Toggle Favorites
                 </Button>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddToAlbum(true)}
+                  className="gap-2"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  Add to album
+                </Button>
+                <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => setShowBatchDeleteDialog(true)}
@@ -420,6 +431,16 @@ export function Gallery() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AddToAlbumDialog
+        imageIds={Array.from(selectedImages)}
+        open={showAddToAlbum}
+        onOpenChange={setShowAddToAlbum}
+        onDone={() => {
+          setSelectedImages(new Set());
+          setSelectionMode(false);
+        }}
+      />
 
       {/* Batch Delete Dialog */}
       <AlertDialog open={showBatchDeleteDialog} onOpenChange={setShowBatchDeleteDialog}>

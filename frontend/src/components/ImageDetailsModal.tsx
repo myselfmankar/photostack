@@ -82,18 +82,20 @@ export function ImageDetailsModal({
                   <Download className="h-4 w-4" />
                 </a>
               </Button>
+              {onDelete && (
               <Button
                 size="sm"
                 variant="outline"
                 className="flex-1 gap-2 h-9 text-red-500 hover:text-red-600"
                 onClick={() => {
-                  onDelete?.(image.id);
+                  onDelete(image.id);
                   onClose();
                 }}
                 disabled={isLoading}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+              )}
             </div>
 
             {hasExif && (

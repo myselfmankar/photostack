@@ -198,7 +198,7 @@ def get_duplicate_images(db: Session) -> list[list[Image]]:
 # --- Albums -------------------------------------------------------------------
 
 
-def get_album_summary(db: Session) -> list[dict]:
+def get_months(db: Session) -> list[dict]:
     """One entry per month that has photos (by date taken), newest month first."""
     rows = (
         db.query(Image.filename, Image.date_taken)
@@ -223,7 +223,7 @@ def get_album_summary(db: Session) -> list[dict]:
     return months[::-1]
 
 
-def get_album_images(db: Session, year: int, month: int) -> list[Image]:
+def get_month_images(db: Session, year: int, month: int) -> list[Image]:
     return (
         _images(db)
         .filter(
@@ -236,7 +236,33 @@ def get_album_images(db: Session, year: int, month: int) -> list[Image]:
 
 
 def get_album(db: Session, album_id: int) -> models.Album | None:
-    return db.query(models.Album).filter(models.Album.id == album_id).first()
+    return (
+        db.query(models.Album)
+        .options(selectinload(models.Album.images).selectinload(Image.tags))
+        .filter(models.Album.id == album_id)
+        .first()
+    )
+
+
+def get_albums(db: Session) -> list[dict]:
+    """Every custom album with its photo count and a cover thumbnail, newest first."""
+    albums = (
+        db.query(models.Album)
+        .options(selectinload(models.Album.images))
+        .order_by(models.Album.created_at.desc(), models.Album.id.desc())
+        .all()
+    )
+    return [
+        {
+            "id": album.id,
+            "name": album.name,
+            "description": album.description,
+            "created_at": album.created_at,
+            "image_count": len(album.images),
+            "cover_url": storage.thumbnail_url(album.images[0].filename) if album.images else None,
+        }
+        for album in albums
+    ]
 
 
 def create_album(db: Session, album: schemas.AlbumCreate) -> models.Album:
@@ -247,11 +273,30 @@ def create_album(db: Session, album: schemas.AlbumCreate) -> models.Album:
     return db_album
 
 
-def add_image_to_album(db: Session, album_id: int, image_id: int) -> None:
-    album, image = get_album(db, album_id), get_image_by_id(db, image_id)
-    if album and image and image not in album.images:
-        album.images.append(image)
-        db.commit()
+def update_album(db: Session, album: models.Album, changes: schemas.AlbumUpdate) -> models.Album:
+    for field, value in changes.model_dump(exclude_unset=True).items():
+        setattr(album, field, value)
+    db.commit()
+    return album
+
+
+def delete_album(db: Session, album: models.Album) -> None:
+    """Deletes the album only; its photos stay in the library."""
+    db.delete(album)
+    db.commit()
+
+
+def add_images_to_album(db: Session, album: models.Album, image_ids: list[int]) -> None:
+    """Add photos, skipping ids that don't exist or are already in the album."""
+    present = {image.id for image in album.images}
+    new = db.query(Image).filter(Image.id.in_(set(image_ids) - present)).all()
+    album.images.extend(new)
+    db.commit()
+
+
+def remove_images_from_album(db: Session, album: models.Album, image_ids: list[int]) -> None:
+    album.images = [image for image in album.images if image.id not in set(image_ids)]
+    db.commit()
 
 
 # --- Map, filters, stats ------------------------------------------------------

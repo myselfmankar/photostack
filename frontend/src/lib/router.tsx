@@ -3,6 +3,7 @@ import { Layout } from '@/components/Layout';
 import { Gallery } from '@/pages/Gallery';
 import { Albums } from '@/pages/Albums';
 import { AlbumDetail } from '@/pages/AlbumDetail';
+import { CustomAlbum } from '@/pages/CustomAlbum';
 import { MapView } from '@/pages/MapView';
 import { Favorites } from '@/pages/Favorites';
 import { Search } from '@/pages/Search';
@@ -33,6 +34,10 @@ export const router = createBrowserRouter([
       {
         path: 'albums/:year/:month',
         element: <AlbumDetail />,
+      },
+      {
+        path: 'albums/:id',
+        element: <CustomAlbum />,
       },
       {
         path: 'map',

@@ -76,5 +76,10 @@ class Album(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     description: Mapped[str | None]
+    created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
 
-    images: Mapped[list[Image]] = relationship(secondary=album_images, back_populates="albums")
+    images: Mapped[list[Image]] = relationship(
+        secondary=album_images,
+        back_populates="albums",
+        order_by=lambda: (Image.date_taken.is_(None), Image.date_taken, Image.upload_date),
+    )

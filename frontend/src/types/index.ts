@@ -41,11 +41,26 @@ export interface Image {
   full_url: string;
 }
 
-export interface AlbumSummary {
+/** An automatic month album (photos grouped by date taken). */
+export interface MonthAlbum {
   year: number;
   month: number;
+  month_name: string;
   image_count: number;
-  preview_image_url?: string;
+  preview_image_url: string;
+}
+
+/** A user-created album, as shown in the albums list. */
+export interface AlbumSummary extends AlbumRef {
+  created_at: string;
+  image_count: number;
+  cover_url: string | null;
+}
+
+/** A user-created album with its photos. */
+export interface Album extends AlbumRef {
+  created_at: string;
+  images: Image[];
 }
 
 export interface FilterOption {

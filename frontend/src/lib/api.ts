@@ -1,4 +1,4 @@
-import { Image, AlbumSummary, Stats, MapMarker } from '@/types';
+import { Album, AlbumSummary, Image, MapMarker, MonthAlbum, Stats } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -143,20 +143,38 @@ export const apiClient = {
   },
 
   albums: {
-    summary: () =>
-      apiClient.request<AlbumSummary[]>('/api/v1/albums/summary'),
+    months: () => apiClient.request<MonthAlbum[]>('/api/v1/albums/months'),
 
-    getImages: (year: number, month: number) =>
-      apiClient.request<Image[]>(`/api/v1/albums/${year}/${month}`),
+    monthImages: (year: number, month: number) =>
+      apiClient.request<Image[]>(`/api/v1/albums/months/${year}/${month}`),
+
+    list: () => apiClient.request<AlbumSummary[]>('/api/v1/albums'),
+
+    get: (id: number) => apiClient.request<Album>(`/api/v1/albums/${id}`),
 
     create: (name: string, description?: string) =>
-      apiClient.request<any>('/api/v1/albums/', {
+      apiClient.request<Album>('/api/v1/albums', {
         method: 'POST',
         body: JSON.stringify({ name, description }),
       }),
 
-    addImages: (albumId: number, imageIds: number[]) =>
-      apiClient.request<any>(`/api/v1/albums/${albumId}/images`, {
+    update: (id: number, changes: { name?: string; description?: string | null }) =>
+      apiClient.request<Album>(`/api/v1/albums/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(changes),
+      }),
+
+    remove: (id: number) =>
+      apiClient.request<void>(`/api/v1/albums/${id}`, { method: 'DELETE' }),
+
+    addImages: (id: number, imageIds: number[]) =>
+      apiClient.request<Album>(`/api/v1/albums/${id}/images`, {
+        method: 'POST',
+        body: JSON.stringify(imageIds),
+      }),
+
+    removeImages: (id: number, imageIds: number[]) =>
+      apiClient.request<Album>(`/api/v1/albums/${id}/images/remove`, {
         method: 'POST',
         body: JSON.stringify(imageIds),
       }),
