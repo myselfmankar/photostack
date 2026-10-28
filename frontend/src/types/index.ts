@@ -34,6 +34,11 @@ export interface Image {
   longitude: number | null;
   address: string | null;
 
+  /** Integrity checks (see photostack/integrity.py). */
+  sha256: string | null;
+  edited_with: string | null;
+  trailing_bytes: number | null;
+
   tags: Tag[];
   albums: AlbumRef[];
   thumbnail_url: string;

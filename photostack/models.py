@@ -43,6 +43,11 @@ class Image(Base):
     image_size: Mapped[int | None]  # bytes
     fingerprint: Mapped[str | None] = mapped_column(index=True)  # dHash, for duplicates
 
+    # Integrity (see integrity.py)
+    sha256: Mapped[str | None] = mapped_column(index=True)  # exact content hash
+    edited_with: Mapped[str | None]  # editing software named in EXIF
+    trailing_bytes: Mapped[int | None]  # data after the image's end marker
+
     # EXIF
     date_taken: Mapped[datetime.datetime | None] = mapped_column(index=True)
     camera_model: Mapped[str | None]

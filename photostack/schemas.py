@@ -63,6 +63,10 @@ class Image(BaseModel):
     longitude: float | None
     address: str | None
 
+    sha256: str | None
+    edited_with: str | None
+    trailing_bytes: int | None
+
     tags: list[Tag] = []
     albums: list[AlbumRef] = []
 

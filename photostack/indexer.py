@@ -20,7 +20,7 @@ from PIL import ImageOps
 from pillow_heif import register_heif_opener
 from sqlalchemy.orm import Session
 
-from . import crud, storage
+from . import crud, integrity, storage
 from .database import SessionLocal
 from .services import geocoding, tagger
 
@@ -111,6 +111,7 @@ def read_exif(path: Path) -> dict[str, Any]:
         "exposure_time": _shutter(_ratio_or_none(tags, "EXIF ExposureTime")),
         "iso": int(iso) if iso and iso.isdigit() else None,
         "focal_length": f"{focal:g} mm" if focal else None,
+        "edited_with": integrity.edited_with(_text(tags, "Image Software")),
         "latitude": gps[0] if gps else None,
         "longitude": gps[1] if gps else None,
     }
@@ -118,13 +119,16 @@ def read_exif(path: Path) -> dict[str, Any]:
 
 def read_image(path: Path) -> dict[str, Any]:
     """Everything we store about a photo file, as column -> value."""
+    data = path.read_bytes()
     with PILImage.open(path) as img:
         img = ImageOps.exif_transpose(img)  # phone photos store rotation as a flag
         fields = {
             "width": img.width,
             "height": img.height,
-            "image_size": path.stat().st_size,
+            "image_size": len(data),
             "fingerprint": fingerprint(img),
+            "sha256": integrity.sha256(data),
+            "trailing_bytes": integrity.trailing_bytes(data),
         }
     try:
         fields |= read_exif(path)

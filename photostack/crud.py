@@ -29,6 +29,10 @@ def get_image_by_filename(db: Session, filename: str) -> Image | None:
     return db.query(Image).filter(Image.filename == filename).first()
 
 
+def get_image_by_sha256(db: Session, digest: str) -> Image | None:
+    return db.query(Image).filter(Image.sha256 == digest).first()
+
+
 def get_images(
     db: Session,
     skip: int = 0,

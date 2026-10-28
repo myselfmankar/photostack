@@ -1,7 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from .. import crud, indexer, schemas, storage
+from .. import crud, indexer, integrity, schemas, storage
 from ..database import get_db
 
 router = APIRouter(prefix="/api/v1/images", tags=["images"])
@@ -25,7 +25,17 @@ def upload_image(
     if existing and existing.status == "completed":
         return existing
 
-    storage.original_path(filename).write_bytes(file.file.read())
+    data = file.file.read()
+    actual = integrity.real_type(data[:16])
+    if actual is None or actual != integrity.extension_type(filename):
+        raise HTTPException(status_code=400, detail="The file's contents don't match its extension")
+    same = crud.get_image_by_sha256(db, integrity.sha256(data))
+    if same and same.filename != filename:
+        raise HTTPException(
+            status_code=409, detail=f"This exact photo is already in the library as {same.filename}"
+        )
+
+    storage.original_path(filename).write_bytes(data)
     image_id = indexer.queue_file(db, filename)
     background_tasks.add_task(indexer.index_in_background, image_id, filename)
     return crud.get_image_by_id(db, image_id)
