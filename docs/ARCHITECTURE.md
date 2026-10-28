@@ -110,7 +110,7 @@ failed before.
 | `photostack/video.py` | ffprobe/ffmpeg calls for video metadata and thumbnails. |
 | `photostack/integrity.py` | Byte-level checks used at upload and index time. |
 | `photostack/storage.py` | Where files live and their URLs. |
-| `photostack/routers/` | One file per resource: images, albums, search, map, filters, stats, duplicates, batch. |
+| `photostack/routers/` | One file per resource: images, albums, search, map, filters, library (health), duplicates, batch. |
 | `photostack/services/` | Geocoding and the optional AI tagger. |
 | `frontend/src/lib/api.ts` | Typed client for every endpoint. |
 | `frontend/src/hooks/useApi.ts` | React Query hooks (caching, refetch after changes). |

@@ -201,6 +201,16 @@ def index_in_background(image_id: int, filename: str) -> None:
         geocoding.geocode_missing(db)
 
 
+def reindex_in_background(image_ids: list[int]) -> None:
+    """Index these photos again from their files (after a failure, or once ffmpeg exists)."""
+    with SessionLocal() as db:
+        for image_id in image_ids:
+            image = crud.get_image_by_id(db, image_id)
+            if image:
+                index_image(db, image_id, image.filename)
+        geocoding.geocode_missing(db)
+
+
 def queue_file(db: Session, filename: str) -> int | None:
     """Create or reset the row for a file. Returns its id, or None if already indexed."""
     existing = crud.get_image_by_filename(db, filename)

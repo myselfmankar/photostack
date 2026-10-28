@@ -1,4 +1,4 @@
-import { Album, AlbumSummary, Image, MapMarker, MonthAlbum, Stats } from '@/types';
+import { Album, AlbumSummary, Image, Issue, LibraryHealth, MapMarker, MonthAlbum } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -110,6 +110,7 @@ export const apiClient = {
         date?: string;
         isFavorite?: boolean;
         status?: string;
+        issue?: Issue;
       } = {}
     ) => {
       const params = new URLSearchParams({
@@ -122,6 +123,7 @@ export const apiClient = {
       if (filters.date) params.append('date', filters.date);
       if (filters.isFavorite !== undefined) params.append('is_favorite', filters.isFavorite.toString());
       if (filters.status) params.append('status', filters.status);
+      if (filters.issue) params.append('issue', filters.issue);
 
       return apiClient.request<Image[]>(`/api/v1/images?${params.toString()}`);
     },
@@ -201,9 +203,11 @@ export const apiClient = {
       apiClient.request<MapMarker[]>('/api/v1/map/data'),
   },
 
-  stats: {
-    get: () =>
-      apiClient.request<Stats>('/api/v1/dashboard-stats'),
+  library: {
+    health: () => apiClient.request<LibraryHealth>('/api/v1/library'),
+
+    reindex: (issue: Issue) =>
+      apiClient.request<{ queued: number }>(`/api/v1/library/reindex?issue=${issue}`, { method: 'POST' }),
   },
 
 

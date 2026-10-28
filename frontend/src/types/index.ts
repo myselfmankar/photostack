@@ -85,12 +85,13 @@ export interface MapMarker {
   filename: string;
 }
 
-export interface Stats {
-  total_images: number;
-  total_size: number;
-  favorites_count: number;
-  camera_stats: { name: string; value: number }[];
-  location_stats: { name: string; value: number }[];
-  processing_status: Record<string, number>;
-  uploads_by_month: { month: string; count: number }[];
+export type Issue = 'failed' | 'no_date' | 'no_location' | 'flagged' | 'video_no_thumbnail';
+
+export interface LibraryHealth {
+  photos: number;
+  videos: number;
+  storage: { originals: number; thumbnails: number };
+  issues: Record<Issue, number>;
+  duplicates: { groups: number; copies: number; wasted_bytes: number };
+  cameras: { name: string; value: number }[];
 }

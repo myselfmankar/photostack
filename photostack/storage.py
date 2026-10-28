@@ -86,6 +86,11 @@ def display_url(filename: str) -> str:
     return f"{URL_PREFIX}/{filename}"
 
 
+def derived_size() -> int:
+    """Bytes used by generated thumbnails and previews."""
+    return sum(p.stat().st_size for folder in (THUMBNAILS, PREVIEWS) for p in folder.glob("*"))
+
+
 def delete_files(filename: str) -> None:
     """Remove the original and every derived file. Missing files are fine."""
     for path in (original_path(filename), thumbnail_path(filename), preview_path(filename)):

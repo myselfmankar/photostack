@@ -58,6 +58,7 @@ def read_images(
     date: str | None = None,
     is_favorite: bool | None = None,
     status: str | None = None,
+    issue: str | None = None,
     db: Session = Depends(get_db),
 ):
     return crud.get_images(
@@ -70,6 +71,7 @@ def read_images(
         date=date,
         is_favorite=is_favorite,
         status=status,
+        issue=issue,
     )
 
 

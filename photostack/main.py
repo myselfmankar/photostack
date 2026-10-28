@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from . import indexer, storage
 from .config import settings
 from .database import Base, engine
-from .routers import albums, batch, duplicates, filters, images, map, search, stats
+from .routers import albums, batch, duplicates, filters, images, library, map, search
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def get_config() -> dict:
     return {"demo_mode": settings.DEMO_MODE}
 
 
-for module in (images, albums, map, stats, filters, search, batch, duplicates):
+for module in (images, albums, map, library, filters, search, batch, duplicates):
     app.include_router(module.router)
 
 app.mount(storage.URL_PREFIX, StaticFiles(directory=storage.ROOT), name="uploads")

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BarChart3, Copy, FolderOpen, Heart, Images, Map } from 'lucide-react';
+import { Copy, FolderOpen, Heart, HeartPulse, Images, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const MAIN_NAV = [
@@ -10,8 +10,8 @@ export const MAIN_NAV = [
 ];
 
 const LIBRARY_NAV = [
+  { to: '/library', label: 'Health', icon: HeartPulse },
   { to: '/duplicates', label: 'Duplicates', icon: Copy },
-  { to: '/stats', label: 'Statistics', icon: BarChart3 },
 ];
 
 export function Logo() {

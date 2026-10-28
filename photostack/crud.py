@@ -1,11 +1,10 @@
 """All database reads and writes. Routers and the indexer call these; nothing else touches SQL."""
 
 import calendar
-import datetime
 from itertools import groupby
 from typing import Any
 
-from sqlalchemy import extract, func, or_
+from sqlalchemy import and_, extract, func, or_
 from sqlalchemy.orm import Query, Session, selectinload
 
 from . import models, schemas, storage
@@ -43,8 +42,11 @@ def get_images(
     date: str | None = None,  # "YYYY-MM", matched against date_taken
     is_favorite: bool | None = None,
     status: str | None = None,
+    issue: str | None = None,  # a key of ISSUES
 ) -> list[Image]:
     query = _images(db)
+    if issue in ISSUES:
+        query = query.filter(ISSUES[issue])
     if camera_model:
         query = query.filter(Image.camera_model.ilike(f"%{camera_model}%"))
     if location:
@@ -351,25 +353,42 @@ def _top(db: Session, column, limit: int = 5) -> list[dict]:
     return [{"name": name, "value": count} for name, count in rows]
 
 
-def get_stats(db: Session) -> dict:
-    this_year = datetime.date.today().year
-    upload_dates = db.query(Image.upload_date).filter(
-        extract("year", Image.upload_date) == this_year
-    )
-    per_month: dict[int, int] = {}
-    for (uploaded,) in upload_dates:
-        per_month[uploaded.month] = per_month.get(uploaded.month, 0) + 1
+# --- Library health -----------------------------------------------------------
+
+_done = Image.status == "completed"
+
+# Things an owner may want to fix. Each is a filter, so the count on the Library
+# page and the list you get by clicking it can never disagree.
+ISSUES = {
+    "failed": Image.status == "failed",
+    "no_date": and_(_done, Image.date_taken.is_(None)),
+    "no_location": and_(_done, Image.latitude.is_(None)),
+    "flagged": and_(_done, or_(Image.edited_with.is_not(None), Image.trailing_bytes > 0)),
+    "video_no_thumbnail": and_(_done, Image.media_type == "video", Image.width.is_(None)),
+}
+
+
+def ids_with_issue(db: Session, issue: str) -> list[int]:
+    return [i for (i,) in db.query(Image.id).filter(ISSUES[issue])]
+
+
+def get_library_health(db: Session) -> dict:
+    count = lambda *where: db.query(func.count(Image.id)).filter(*where).scalar() or 0  # noqa: E731
+    duplicate_groups = get_duplicate_images(db)
+    copies = [img for group in duplicate_groups for img in group[1:]]
 
     return {
-        "total_images": db.query(func.count(Image.id)).scalar() or 0,
-        "total_size": db.query(func.sum(Image.image_size)).scalar() or 0,
-        "favorites_count": db.query(func.count(Image.id)).filter(Image.is_favorite).scalar() or 0,
-        "camera_stats": _top(db, Image.camera_model),
-        "location_stats": _top(db, Image.address),
-        "processing_status": dict(
-            db.query(Image.status, func.count(Image.id)).group_by(Image.status).all()
-        ),
-        "uploads_by_month": [
-            {"month": calendar.month_abbr[m], "count": n} for m, n in sorted(per_month.items())
-        ],
+        "photos": count(Image.media_type == "photo"),
+        "videos": count(Image.media_type == "video"),
+        "storage": {
+            "originals": db.query(func.sum(Image.image_size)).scalar() or 0,
+            "thumbnails": storage.derived_size(),
+        },
+        "issues": {name: count(where) for name, where in ISSUES.items()},
+        "duplicates": {
+            "groups": len(duplicate_groups),
+            "copies": len(copies),
+            "wasted_bytes": sum(img.image_size or 0 for img in copies),
+        },
+        "cameras": _top(db, Image.camera_model),
     }

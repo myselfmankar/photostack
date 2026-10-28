@@ -19,6 +19,7 @@ yourself.
 - **Search**: by place, camera, tag or file name
 - **Duplicates**: finds copies even when resized or re-saved, keeps the original
 - **Integrity checks**: real file type, SHA-256, signs of editing, data hidden after the image
+- **Library health**: what needs fixing (unreadable files, no date, no location, duplicates), with a retry button
 - **Light and dark mode**, works on phones
 - **Optional AI tags**: off by default; with a Gemini key, photos get descriptive tags
 

@@ -8,7 +8,8 @@ import { CustomAlbum } from '@/pages/CustomAlbum';
 import { Favorites } from '@/pages/Favorites';
 import { Search } from '@/pages/Search';
 import { Upload } from '@/pages/Upload';
-import { Stats } from '@/pages/Stats';
+import { Library } from '@/pages/Library';
+import { LibraryIssue } from '@/pages/LibraryIssue';
 import { ImageDetail } from '@/pages/ImageDetail';
 import { Duplicates } from '@/pages/Duplicates';
 
@@ -65,8 +66,12 @@ export const router = createBrowserRouter([
         element: <Upload />,
       },
       {
-        path: 'stats',
-        element: <Stats />,
+        path: 'library',
+        element: <Library />,
+      },
+      {
+        path: 'library/:issue',
+        element: <LibraryIssue />,
       },
     ],
   },

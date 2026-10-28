@@ -7,6 +7,7 @@
  */
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import { Issue } from '@/types';
 
 export interface ImageFilters {
   camera?: string;
@@ -14,6 +15,7 @@ export interface ImageFilters {
   date?: string;
   isFavorite?: boolean;
   status?: string;
+  issue?: Issue;
 }
 
 const PAGE_SIZE = 60;
@@ -74,8 +76,8 @@ export const useDateFilters = () =>
 export const useMapData = () =>
   useQuery({ queryKey: ['map'], queryFn: () => apiClient.map.data() });
 
-export const useStats = () =>
-  useQuery({ queryKey: ['stats'], queryFn: () => apiClient.stats.get() });
+export const useLibraryHealth = () =>
+  useQuery({ queryKey: ['library'], queryFn: () => apiClient.library.health() });
 
 export const useDuplicateImageGroups = () =>
   useQuery({ queryKey: ['duplicates'], queryFn: () => apiClient.duplicates.getGroups() });
@@ -93,6 +95,8 @@ function useWrite<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>) {
 }
 
 export const useToggleFavorite = () => useWrite((id: number) => apiClient.images.toggleFavorite(id));
+
+export const useReindex = () => useWrite((issue: Issue) => apiClient.library.reindex(issue));
 
 export const useDeleteImage = () => useWrite((id: number) => apiClient.images.delete(id));
 
