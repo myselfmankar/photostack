@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { Copy } from 'lucide-react';
-import { useBatchDeleteImages, useDuplicateImageGroups } from '@/hooks/useApi';
+import { useBatchDeleteImages, useDemoMode, useDuplicateImageGroups } from '@/hooks/useApi';
 import { Image } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -18,6 +18,7 @@ const formatSize = (n: number | null) => (n ? `${(n / 1024 / 1024).toFixed(1)} M
 export function Duplicates() {
   const { data: groups = [], isLoading } = useDuplicateImageGroups();
   const batchDelete = useBatchDeleteImages();
+  const demo = useDemoMode();
   const [pending, setPending] = useState<Image[] | null>(null);
 
   const deleteCopies = async (copies: Image[]) => {
@@ -39,7 +40,7 @@ export function Duplicates() {
         `${groups.length} group${groups.length === 1 ? '' : 's'} of photos that look the same`
       }
       actions={
-        groups.length > 1 && (
+        !demo && groups.length > 1 && (
           <Button variant="outline" className="rounded-full" onClick={() => setPending(allCopies)}>
             Delete all {allCopies.length} copies
           </Button>
@@ -77,7 +78,7 @@ export function Duplicates() {
                   </figure>
                 ))}
               </div>
-              <div className="mt-3 flex justify-end">
+              <div className={cn('mt-3 flex justify-end', demo && 'hidden')}>
                 <Button size="sm" variant="secondary" className="rounded-full" onClick={() => setPending(group.slice(1))}>
                   Keep original, delete {group.length - 1} cop{group.length === 2 ? 'y' : 'ies'}
                 </Button>

@@ -80,6 +80,11 @@ export const useStats = () =>
 export const useDuplicateImageGroups = () =>
   useQuery({ queryKey: ['duplicates'], queryFn: () => apiClient.duplicates.getGroups() });
 
+/** True on the public demo: uploads and photo deletes are switched off server-side. */
+export const useDemoMode = () =>
+  useQuery({ queryKey: ['config'], queryFn: () => apiClient.config(), staleTime: Infinity }).data
+    ?.demo_mode ?? false;
+
 // --- Writes -------------------------------------------------------------------
 
 function useWrite<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>) {

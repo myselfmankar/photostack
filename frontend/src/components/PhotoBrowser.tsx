@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { FolderPlus, Heart, Loader2, Trash2, X } from 'lucide-react';
 import { Image } from '@/types';
-import { useBatchDeleteImages, useBatchToggleFavoriteStatus, useToggleFavorite } from '@/hooks/useApi';
+import {
+  useBatchDeleteImages,
+  useBatchToggleFavoriteStatus,
+  useDemoMode,
+  useToggleFavorite,
+} from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { AddToAlbumDialog } from './AddToAlbumDialog';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -35,6 +40,7 @@ export function PhotoBrowser({ images, byDay, loadMore, loadingMore, remove }: P
   const favorite = useToggleFavorite();
   const batchFavorite = useBatchToggleFavoriteStatus();
   const batchDelete = useBatchDeleteImages();
+  const demo = useDemoMode();
 
   const ids = [...selected];
   const clear = () => setSelected(new Set());
@@ -74,7 +80,9 @@ export function PhotoBrowser({ images, byDay, loadMore, loadingMore, remove }: P
     onToggleFavorite: (id) => favorite.mutate(id),
     ...(remove
       ? { remove: { label: remove.label, onRemove: (id) => removePhotos([id]) } }
-      : { onDelete: (id) => deletePhotos([id]) }),
+      : demo
+        ? {}
+        : { onDelete: (id) => deletePhotos([id]) }),
   };
 
   const openIndex = images.findIndex((i) => i.id === openId);
@@ -98,7 +106,7 @@ export function PhotoBrowser({ images, byDay, loadMore, loadingMore, remove }: P
               <Button variant="ghost" className="gap-2" onClick={() => removePhotos(ids)}>
                 <X className="h-4 w-4" /> <span className="hidden sm:inline">{remove.label}</span>
               </Button>
-            ) : (
+            ) : demo ? null : (
               <Button variant="ghost" className="gap-2 text-destructive" onClick={() => setConfirmingDelete(true)}>
                 <Trash2 className="h-4 w-4" /> <span className="hidden sm:inline">Delete</span>
               </Button>

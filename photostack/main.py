@@ -5,12 +5,13 @@ import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import indexer, storage
+from .config import settings
 from .database import Base, engine
 from .routers import albums, batch, duplicates, filters, images, map, search, stats
 
@@ -30,6 +31,30 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="PhotoStack", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+def is_blocked_in_demo(method: str, path: str) -> bool:
+    """Uploading and deleting photos are the only actions a demo visitor can't do."""
+    if method == "DELETE" and path.startswith("/api/v1/images/"):
+        return True
+    return method == "POST" and path in ("/api/v1/images", "/api/v1/batch/images/delete")
+
+
+@app.middleware("http")
+async def demo_guard(request: Request, call_next):
+    if settings.DEMO_MODE and is_blocked_in_demo(request.method, request.url.path):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "This is a read-only demo: uploads and deletes are off."},
+        )
+    return await call_next(request)
+
+
+@app.get("/api/v1/config", tags=["config"])
+def get_config() -> dict:
+    """Settings the frontend needs to know about."""
+    return {"demo_mode": settings.DEMO_MODE}
+
 
 for module in (images, albums, map, stats, filters, search, batch, duplicates):
     app.include_router(module.router)

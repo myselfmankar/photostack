@@ -221,6 +221,8 @@ export const apiClient = {
       ),
   },
 
+  config: () => apiClient.request<{ demo_mode: boolean }>('/api/v1/config'),
+
   duplicates: {
     getGroups: () =>
       apiClient.request<Image[][]>('/api/v1/duplicates'),

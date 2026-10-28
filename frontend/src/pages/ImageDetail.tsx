@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ImageOff } from 'lucide-react';
-import { useDeleteImage, useImage, useToggleFavorite } from '@/hooks/useApi';
+import { useDeleteImage, useDemoMode, useImage, useToggleFavorite } from '@/hooks/useApi';
 import { EmptyState, Page } from '@/components/Page';
 import { PhotoViewer } from '@/components/PhotoViewer';
 
@@ -12,6 +12,7 @@ export function ImageDetail() {
   const { data: image, isLoading } = useImage(id);
   const favorite = useToggleFavorite();
   const remove = useDeleteImage();
+  const demo = useDemoMode();
   const close = () => (window.history.length > 1 ? navigate(-1) : navigate('/'));
 
   if (isLoading) return null;
@@ -30,11 +31,15 @@ export function ImageDetail() {
       onIndexChange={() => {}}
       onClose={close}
       onToggleFavorite={(photoId) => favorite.mutate(photoId)}
-      onDelete={async (photoId) => {
-        await remove.mutateAsync(photoId);
-        toast.success('Photo deleted');
-        navigate('/');
-      }}
+      onDelete={
+        demo
+          ? undefined
+          : async (photoId) => {
+              await remove.mutateAsync(photoId);
+              toast.success('Photo deleted');
+              navigate('/');
+            }
+      }
     />
   );
 }

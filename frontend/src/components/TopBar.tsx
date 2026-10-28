@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Menu, Moon, Search, Sun, Upload } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
+import { useDemoMode } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Logo } from './Sidebar';
 
@@ -11,6 +12,7 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const [params] = useSearchParams();
   const [query, setQuery] = useState('');
   const { theme, toggle } = useTheme();
+  const demo = useDemoMode();
 
   // Keep the box in sync with /search?q=..., and clear it elsewhere.
   useEffect(() => {
@@ -55,12 +57,14 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
         <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle dark mode">
           {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
+        {!demo && (
         <Button asChild className="ml-1 gap-2 rounded-full">
           <Link to="/upload">
             <Upload className="h-4 w-4" />
             <span className="hidden sm:inline">Upload</span>
           </Link>
         </Button>
+        )}
       </div>
     </header>
   );
