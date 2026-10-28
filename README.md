@@ -54,7 +54,7 @@ All optional, via environment variables or a `.env` file (see `.env.example`):
 | `UPLOADS_DIR` | `uploads` | Where photos, thumbnails and previews are stored |
 | `GEOCODING_ENABLED` | `true` | Look up street addresses for GPS positions |
 | `GEMINI_API_KEY` | unset | Turns on AI tagging (needs `uv sync --extra ai`). Sends 400px thumbnails to Google |
-| `DEMO_MODE` | `false` | Public demo: no uploads or deletes |
+| `DEMO_MODE` | `false` | Public demo: fully read-only, with example albums from `demo-photos/albums.json` |
 
 ## How it works
 

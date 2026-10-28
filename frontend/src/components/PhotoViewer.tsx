@@ -22,8 +22,10 @@ import { AddToAlbumDialog } from './AddToAlbumDialog';
 import { formatDuration } from './PhotoGrid';
 import { ConfirmDialog } from './ConfirmDialog';
 
+/** Buttons only appear for the actions that are passed (none on the read-only demo). */
 export interface ViewerActions {
-  onToggleFavorite: (id: number) => void;
+  onToggleFavorite?: (id: number) => void;
+  canAddToAlbum?: boolean;
   onDelete?: (id: number) => void;
   /** e.g. "Remove from album": shown instead of Delete when provided. */
   remove?: { label: string; onRemove: (id: number) => void };
@@ -46,6 +48,7 @@ export function PhotoViewer({
   onIndexChange,
   onClose,
   onToggleFavorite,
+  canAddToAlbum = false,
   onDelete,
   remove,
 }: PhotoViewerProps) {
@@ -92,6 +95,7 @@ export function PhotoViewer({
             <X className="h-5 w-5" />
           </button>
           <div className="ml-auto flex items-center gap-1">
+            {onToggleFavorite && (
             <button
               className={iconButton}
               onClick={() => onToggleFavorite(image.id)}
@@ -99,12 +103,15 @@ export function PhotoViewer({
             >
               <Heart className={cn('h-5 w-5', image.is_favorite && 'fill-current')} />
             </button>
+            )}
             <a className={iconButton} href={image.full_url} download={image.filename} aria-label="Download">
               <Download className="h-5 w-5" />
             </a>
+            {canAddToAlbum && (
             <button className={iconButton} onClick={() => setAddingToAlbum(true)} aria-label="Add to album">
               <FolderPlus className="h-5 w-5" />
             </button>
+            )}
             {(remove || onDelete) && (
               <button
                 className={iconButton}

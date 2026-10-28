@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, FolderOpen, Pencil, Trash2 } from 'lucide-react';
-import { useAlbum, useDeleteAlbum, useRemoveImagesFromAlbum, useUpdateAlbum } from '@/hooks/useApi';
+import { useAlbum, useDeleteAlbum, useDemoMode, useRemoveImagesFromAlbum, useUpdateAlbum } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -21,6 +21,7 @@ export function CustomAlbum() {
   const removeImages = useRemoveImagesFromAlbum();
   const [editingName, setEditingName] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const demo = useDemoMode();
 
   if (isLoading) {
     return (
@@ -103,6 +104,7 @@ export function CustomAlbum() {
       title={title}
       subtitle={plural(album.images.length)}
       actions={
+        !demo && (
         <>
           <Button variant="outline" size="sm" className="gap-2 rounded-full" onClick={() => setEditingName(album.name)}>
             <Pencil className="h-4 w-4" /> Rename
@@ -116,10 +118,14 @@ export function CustomAlbum() {
             <Trash2 className="h-4 w-4" /> Delete album
           </Button>
         </>
+        )
       }
     >
       {album.images.length > 0 ? (
-        <PhotoBrowser images={album.images} remove={{ label: 'Remove from album', onRemove: remove }} />
+        <PhotoBrowser
+          images={album.images}
+          remove={demo ? undefined : { label: 'Remove from album', onRemove: remove }}
+        />
       ) : (
         <EmptyState icon={FolderOpen} title="This album is empty">
           On the{' '}

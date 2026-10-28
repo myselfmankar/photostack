@@ -76,14 +76,16 @@ export function PhotoBrowser({ images, byDay, loadMore, loadingMore, remove }: P
     clear();
   };
 
-  const viewerActions: ViewerActions = {
-    onToggleFavorite: (id) => favorite.mutate(id),
-    ...(remove
-      ? { remove: { label: remove.label, onRemove: (id) => removePhotos([id]) } }
-      : demo
-        ? {}
-        : { onDelete: (id) => deletePhotos([id]) }),
-  };
+  // The read-only demo gets no actions at all, so no edit buttons are drawn.
+  const viewerActions: ViewerActions = demo
+    ? {}
+    : {
+        onToggleFavorite: (id) => favorite.mutate(id),
+        canAddToAlbum: true,
+        ...(remove
+          ? { remove: { label: remove.label, onRemove: (id) => removePhotos([id]) } }
+          : { onDelete: (id) => deletePhotos([id]) }),
+      };
 
   const openIndex = images.findIndex((i) => i.id === openId);
 
@@ -106,7 +108,7 @@ export function PhotoBrowser({ images, byDay, loadMore, loadingMore, remove }: P
               <Button variant="ghost" className="gap-2" onClick={() => removePhotos(ids)}>
                 <X className="h-4 w-4" /> <span className="hidden sm:inline">{remove.label}</span>
               </Button>
-            ) : demo ? null : (
+            ) : (
               <Button variant="ghost" className="gap-2 text-destructive" onClick={() => setConfirmingDelete(true)}>
                 <Trash2 className="h-4 w-4" /> <span className="hidden sm:inline">Delete</span>
               </Button>
@@ -119,9 +121,9 @@ export function PhotoBrowser({ images, byDay, loadMore, loadingMore, remove }: P
         images={images}
         byDay={byDay}
         selected={selected}
-        onToggleSelect={toggleSelect}
+        onToggleSelect={demo ? undefined : toggleSelect}
         onOpen={(img) => setOpenId(img.id)}
-        onToggleFavorite={(id) => favorite.mutate(id)}
+        onToggleFavorite={demo ? undefined : (id) => favorite.mutate(id)}
       />
 
       {loadMore && <LoadMoreSentinel onVisible={loadMore} loading={loadingMore} />}

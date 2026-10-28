@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     GEOCODING_ENABLED: bool = True
     # Enables optional AI tagging. AI features are off when unset.
     GEMINI_API_KEY: str | None = None
-    # Public demo: visitors can browse, favorite and make albums, but not upload or delete photos.
+    # Public demo: read-only. Visitors can browse everything but change nothing.
     DEMO_MODE: bool = False
 
 

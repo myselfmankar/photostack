@@ -34,10 +34,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 
 def is_blocked_in_demo(method: str, path: str) -> bool:
-    """Uploading and deleting photos are the only actions a demo visitor can't do."""
-    if method == "DELETE" and path.startswith("/api/v1/images/"):
-        return True
-    return method == "POST" and path in ("/api/v1/images", "/api/v1/batch/images/delete")
+    """The public demo is read-only: any API request that would change data is refused."""
+    return path.startswith("/api/") and method not in ("GET", "HEAD", "OPTIONS")
 
 
 @app.middleware("http")
@@ -45,7 +43,7 @@ async def demo_guard(request: Request, call_next):
     if settings.DEMO_MODE and is_blocked_in_demo(request.method, request.url.path):
         return JSONResponse(
             status_code=403,
-            content={"detail": "This is a read-only demo: uploads and deletes are off."},
+            content={"detail": "This is a read-only demo."},
         )
     return await call_next(request)
 

@@ -20,7 +20,7 @@ from PIL import ImageOps
 from pillow_heif import register_heif_opener
 from sqlalchemy.orm import Session
 
-from . import crud, integrity, storage, video
+from . import crud, demo, integrity, storage, video
 from .database import SessionLocal
 from .services import geocoding, tagger
 
@@ -231,5 +231,6 @@ def scan_library() -> None:
                 if image_id is not None:
                     logger.info("Indexing %s", path.name)
                     index_image(db, image_id, path.name)
+        demo.seed_albums(db)  # no-op unless DEMO_MODE
         geocoding.geocode_missing(db)
     logger.info("Library scan finished")

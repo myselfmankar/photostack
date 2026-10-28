@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { FolderOpen, Plus } from 'lucide-react';
-import { useAlbums, useCreateAlbum, useMonthAlbums } from '@/hooks/useApi';
+import { useAlbums, useCreateAlbum, useDemoMode, useMonthAlbums } from '@/hooks/useApi';
 import { MonthAlbum } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -76,6 +76,7 @@ export function Albums() {
   const { data: albums = [], isLoading } = useAlbums();
   const { data: months = [] } = useMonthAlbums();
   const [creating, setCreating] = useState(false);
+  const demo = useDemoMode();
 
   const years = Object.entries(
     months.reduce<Record<number, MonthAlbum[]>>((acc, m) => {
@@ -88,9 +89,11 @@ export function Albums() {
     <Page
       title="Albums"
       actions={
-        <Button onClick={() => setCreating(true)} className="gap-2 rounded-full">
-          <Plus className="h-4 w-4" /> New album
-        </Button>
+        !demo && (
+          <Button onClick={() => setCreating(true)} className="gap-2 rounded-full">
+            <Plus className="h-4 w-4" /> New album
+          </Button>
+        )
       }
     >
       <div className="space-y-10">
@@ -107,7 +110,7 @@ export function Albums() {
                 <AlbumTile key={a.id} to={`/albums/${a.id}`} cover={a.cover_url} title={a.name} subtitle={plural(a.image_count)} />
               ))}
             </div>
-          ) : (
+          ) : demo ? null : (
             <button
               onClick={() => setCreating(true)}
               className="flex w-full items-center gap-4 rounded-xl border border-dashed p-5 text-left hover:bg-muted"

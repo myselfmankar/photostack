@@ -1,6 +1,8 @@
 import { Album, AlbumSummary, Image, Issue, LibraryHealth, MapMarker, MonthAlbum } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Same origin by default: in production FastAPI serves this app and the API together,
+// and in `npm run dev` Vite proxies /api and /uploads to the backend (vite.config.ts).
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 export const apiClient = {
   async request<T>(

@@ -31,9 +31,10 @@ interface PhotoGridProps {
   /** Show "Mon, Nov 17" headings between days. */
   byDay?: boolean;
   selected: Set<number>;
-  onToggleSelect: (id: number) => void;
+  /** Omit to make the grid view-only (no select circles or hearts). */
+  onToggleSelect?: (id: number) => void;
   onOpen: (image: Image) => void;
-  onToggleFavorite: (id: number) => void;
+  onToggleFavorite?: (id: number) => void;
 }
 
 /**
@@ -104,7 +105,7 @@ function Tile({
     >
       <button
         type="button"
-        onClick={() => (selecting ? onToggleSelect(image.id) : onOpen(image))}
+        onClick={() => (selecting && onToggleSelect ? onToggleSelect(image.id) : onOpen(image))}
         className="absolute inset-0 h-full w-full focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-primary"
         aria-label={`Open ${image.filename}`}
       >
@@ -152,6 +153,7 @@ function Tile({
         )}
       />
 
+      {onToggleSelect && (
       <button
         type="button"
         onClick={() => onToggleSelect(image.id)}
@@ -167,8 +169,9 @@ function Tile({
       >
         <Check className="h-3.5 w-3.5" strokeWidth={3} />
       </button>
+      )}
 
-      {!selecting && (
+      {!selecting && onToggleFavorite && (
         <button
           type="button"
           onClick={() => onToggleFavorite(image.id)}

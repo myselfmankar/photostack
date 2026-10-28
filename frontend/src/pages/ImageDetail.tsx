@@ -30,7 +30,8 @@ export function ImageDetail() {
       index={0}
       onIndexChange={() => {}}
       onClose={close}
-      onToggleFavorite={(photoId) => favorite.mutate(photoId)}
+      onToggleFavorite={demo ? undefined : (photoId) => favorite.mutate(photoId)}
+      canAddToAlbum={!demo}
       onDelete={
         demo
           ? undefined
