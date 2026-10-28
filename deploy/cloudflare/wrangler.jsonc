@@ -1,0 +1,23 @@
+// Public demo on Cloudflare Containers. Deploy from this folder with:
+//   npm install && npx wrangler deploy
+// Needs Docker running locally and the Workers Paid plan.
+{
+  "name": "photostack",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "containers": [
+    {
+      "class_name": "PhotoStack",
+      "image": "../../Dockerfile",
+      // 1 GiB memory: enough to index 2048px photos with Pillow.
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "PHOTOSTACK", "class_name": "PhotoStack" }]
+  },
+  "exports": {
+    "PhotoStack": { "type": "durable-object", "storage": "sqlite" }
+  }
+}

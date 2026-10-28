@@ -5,9 +5,9 @@ where they were taken, builds a timeline, groups them into albums, puts them on
 a map, and finds duplicates. Think a small, understandable Google Photos you run
 yourself.
 
-**[Live demo →](https://photostack-demo.fly.dev)** (sample photos, read-only)
+**[Website](https://myselfmankar.github.io/photostack/) · [Live demo](https://photostack.myselfmankar.workers.dev)** (read-only, sample photos)
 
-<!-- Add a screenshot once the demo photos are in: docs/screenshot.png -->
+![PhotoStack timeline](docs/screenshots/timeline.webp)
 
 ## Features
 
@@ -81,14 +81,20 @@ npm --prefix frontend run typecheck
 
 ## Deploying the demo
 
-The demo runs on [Fly.io](https://fly.io) with `DEMO_MODE=true`. Put sample
-photos in `demo-photos/` (read its README first: GPS locations become public), then:
+The public demo runs on [Cloudflare Containers](https://developers.cloudflare.com/containers/)
+with `DEMO_MODE=true` (read-only; Workers Paid plan). With Docker running:
 
 ```bash
-fly launch --no-deploy --copy-config
-fly volumes create photostack_data --size 1
-fly deploy
+cd deploy/cloudflare
+npm install
+npx wrangler deploy
 ```
+
+The container's disk is reset whenever it sleeps; that's fine for the demo, which
+re-seeds `demo-photos/` and re-indexes in about 5 seconds on each start.
+
+The project website is `docs/index.html`, published with GitHub Pages
+(Settings → Pages → Deploy from branch `main`, folder `/docs`).
 
 ## License
 

@@ -1,0 +1,13 @@
+{
+  "name": "photostack-cloudflare",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.30"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}
