@@ -5,7 +5,7 @@ where they were taken, builds a timeline, groups them into albums, puts them on
 a map, and finds duplicates. Think a small, understandable Google Photos you run
 yourself.
 
-**[Website](https://myselfmankar.github.io/photostack/) · [Live demo](https://photostack.myselfmankar.workers.dev)** (read-only, sample photos)
+**[Website](https://myselfmankar.github.io/photostack/) · [Live demo](https://photostack.onrender.com)** (read-only, sample photos)
 
 ![PhotoStack timeline](docs/screenshots/timeline.webp)
 
@@ -81,20 +81,12 @@ npm --prefix frontend run typecheck
 
 ## Deploying the demo
 
-The public demo runs on [Cloudflare Containers](https://developers.cloudflare.com/containers/)
-with `DEMO_MODE=true` (read-only; Workers Paid plan). With Docker running:
+The public demo runs on [Render](https://render.com)'s free tier from `render.yaml`
+(Dashboard → New → Blueprint → this repo). It runs the Docker image with
+`DEMO_MODE=true`: read-only, seeded with `demo-photos/` on every start, no AI.
+Free instances sleep when idle, so the first visit can take up to a minute.
 
-```bash
-cd deploy/cloudflare
-npm install
-npx wrangler deploy
-```
-
-The container's disk is reset whenever it sleeps; that's fine for the demo, which
-re-seeds `demo-photos/` and re-indexes in about 5 seconds on each start.
-
-The project website is `docs/index.html`, published with GitHub Pages
-(Settings → Pages → Deploy from branch `main`, folder `/docs`).
+The project website is `docs/index.html`, published with GitHub Pages from `/docs`.
 
 ## License
 
