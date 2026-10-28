@@ -39,7 +39,17 @@ def client(workdir):
 
 def make_jpeg(color=(200, 50, 50), size=(64, 48), *, camera=None, taken=None, gps=None) -> bytes:
     """Build a small JPEG in memory, optionally with EXIF camera/date/GPS."""
-    img = Image.new("RGB", size, color)
+    # A colour-dependent gradient, so different colours give different
+    # fingerprints (flat images would all hash the same).
+    img = Image.new("RGB", size)
+    r, g, b = color
+    img.putdata(
+        [
+            ((r + x * 4) % 256, (g + y * 5) % 256, (b + (x * y) % 97) % 256)
+            for y in range(size[1])
+            for x in range(size[0])
+        ]
+    )
     exif = Image.Exif()
     if camera:
         exif[0x0110] = camera  # Model

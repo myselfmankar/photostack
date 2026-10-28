@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import logging
 import os
@@ -32,7 +33,7 @@ def image_fingerprint(img: PILImage.Image) -> str:
     what duplicate detection groups on.
     """
     small = img.convert("L").resize((9, 8), PILImage.Resampling.LANCZOS)
-    px = list(small.getdata())
+    px = list(small.tobytes())  # one byte per pixel in mode L
     bits = 0
     for row in range(8):
         for col in range(8):
@@ -47,13 +48,16 @@ def generate_image_tags_sync(filepath: str) -> list[str]:
 
 def _get_date_taken(tags):
     """Helper to get the date taken from EXIF tags."""
-    if 'EXIF DateTimeOriginal' in tags:
+    if "EXIF DateTimeOriginal" in tags:
         try:
-            return datetime.datetime.strptime(str(tags['EXIF DateTimeOriginal']), '%Y:%m:%d %H:%M:%S')
+            return datetime.datetime.strptime(
+                str(tags["EXIF DateTimeOriginal"]), "%Y:%m:%d %H:%M:%S"
+            )
         except (ValueError, TypeError):
             logger.warning("Could not parse EXIF DateTimeOriginal.")
             return None
     return None
+
 
 def process_image_background(filepath: str, image_id: int):
     """
@@ -68,13 +72,14 @@ def process_image_background(filepath: str, image_id: int):
     finally:
         db.close()
 
+
 def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Session):
     """
     Extracts metadata from an image file, generates AI tags, and updates the
     corresponding Image record in the database.
     """
     logger.info(f"Starting metadata processing for image ID {image_id}: {filepath}")
-    
+
     try:
         filename = os.path.basename(filepath)
         is_heic = storage.needs_preview(filename)
@@ -93,12 +98,12 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
         iso = None
         focal_length = None
         lens_model = None
-        
+
         # Open image with PIL (handles HEIC via registered opener)
         with PILImage.open(filepath) as img:
             resolution = f"{img.width}x{img.height}"
             image_size = os.path.getsize(filepath)
-            
+
             # Generate pHash
             phash = image_fingerprint(img)
 
@@ -121,56 +126,50 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
                     try:
                         logger.info(f"Creating preview for HEIC image {filename}")
                         # Max dimension 1920 to save space but keep quality
-                        img.thumbnail((1920, 1920)) 
+                        img.thumbnail((1920, 1920))
                         img.save(preview_path, "webp", quality=85)
                     except Exception as e:
                         logger.error(f"Preview generation failed: {e}")
 
         # 3. Extract EXIF
         # We try exifread first as it's robust for standard formats.
-        # For HEIC, if exifread fails, we might need other parsing, but modern exifread handles it often.
         try:
-            with open(filepath, 'rb') as f:
+            with open(filepath, "rb") as f:
                 exif_tags = exifread.process_file(f, details=True)
-                
-                if not exif_tags and is_heic:
-                    logger.warning("ExifRead found no tags for HEIC. Attempting PIL metadata extraction...")
-                    # Fallback logic could go here if needed, but keeping it simple for now.
-                
+
                 for tag, value in exif_tags.items():
                     if tag not in ("JPEGThumbnail", "TIFFThumbnail"):
                         raw_exif_data[tag] = str(value)
 
                 # Location
                 if "GPS GPSLatitude" in exif_tags:
-                    lat = _convert_to_degrees(exif_tags['GPS GPSLatitude'].values)
-                    lon = _convert_to_degrees(exif_tags['GPS GPSLongitude'].values)
-                    if exif_tags['GPS GPSLatitudeRef'].values[0] != 'N':
+                    lat = _convert_to_degrees(exif_tags["GPS GPSLatitude"].values)
+                    lon = _convert_to_degrees(exif_tags["GPS GPSLongitude"].values)
+                    if exif_tags["GPS GPSLatitudeRef"].values[0] != "N":
                         lat = -lat
-                    if exif_tags['GPS GPSLongitudeRef'].values[0] != 'E':
+                    if exif_tags["GPS GPSLongitudeRef"].values[0] != "E":
                         lon = -lon
                     location_data = schemas.LocationCreate(latitude=lat, longitude=lon)
 
                 # Specific fields
                 date_taken = _get_date_taken(exif_tags)
-                camera_model = str(exif_tags.get('Image Model', 'Unknown'))
-                
-                f_number_raw = exif_tags.get('EXIF FNumber')
+                camera_model = str(exif_tags.get("Image Model", "Unknown"))
+
+                f_number_raw = exif_tags.get("EXIF FNumber")
                 if f_number_raw:
-                    try:
-                        f_number = float(f_number_raw.values[0].num) / float(f_number_raw.values[0].den)
-                    except Exception: pass
-                
-                exposure_time = str(exif_tags.get('EXIF ExposureTime'))
-                
-                iso_tag = exif_tags.get('EXIF ISOSpeedRatings')
+                    ratio = f_number_raw.values[0]
+                    with contextlib.suppress(Exception):
+                        f_number = float(ratio.num) / float(ratio.den)
+
+                exposure_time = str(exif_tags.get("EXIF ExposureTime"))
+
+                iso_tag = exif_tags.get("EXIF ISOSpeedRatings")
                 if iso_tag:
-                    try:
+                    with contextlib.suppress(Exception):
                         iso = int(str(iso_tag))
-                    except Exception: pass
-                
-                focal_length = str(exif_tags.get('EXIF FocalLength'))
-                lens_model = str(exif_tags.get('EXIF LensModel'))
+
+                focal_length = str(exif_tags.get("EXIF FocalLength"))
+                lens_model = str(exif_tags.get("EXIF LensModel"))
 
         except Exception as e:
             logger.error(f"Error reading EXIF from {filename}: {e}")
@@ -181,7 +180,7 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
             image_size=image_size,
             status="completed",
             filepath=filepath,
-            filename=filename
+            filename=filename,
         )
         metadata_schema = schemas.MetadataCreate(
             date_taken=date_taken,
@@ -191,20 +190,20 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
             iso=iso,
             focal_length=focal_length,
             lens_model=lens_model,
-            raw_exif=raw_exif_data
+            raw_exif=raw_exif_data,
         )
 
         # --- Update DB ---
         crud.update_image_with_metadata(
-            db, 
-            image_id=image_id, 
+            db,
+            image_id=image_id,
             image_update=image_update_schema,
             metadata=metadata_schema,
             location=location_data,
             tags=ai_tags,
-            phash=phash
+            phash=phash,
         )
-        
+
     except Exception as e:
         logger.error(f"Error processing image {filepath}: {e}", exc_info=True)
         crud.update_image_status(db, image_id=image_id, status="failed")

@@ -1,73 +1,82 @@
-from pydantic import BaseModel, computed_field
+import datetime
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, computed_field
 
 from . import storage
-from typing import Optional, List, Dict, Any
-import datetime
+
 
 # --- Tag Schemas ---
 class TagBase(BaseModel):
     name: str
 
+
 class TagCreate(TagBase):
     pass
+
 
 class Tag(TagBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- Album Schemas ---
 class AlbumBase(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
+
 
 class AlbumCreate(AlbumBase):
     pass
 
+
 class Album(AlbumBase):
     id: int
-    images: List["Image"] = []
+    images: list["Image"] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Location Schemas ---
 class LocationBase(BaseModel):
     latitude: float
     longitude: float
-    address: Optional[str] = None
+    address: str | None = None
+
 
 class LocationCreate(LocationBase):
     pass
 
+
 class Location(LocationBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- Metadata Schemas ---
 class MetadataBase(BaseModel):
-    camera_model: Optional[str] = None
-    date_taken: Optional[datetime.datetime] = None
-    f_number: Optional[float] = None
-    exposure_time: Optional[str] = None
-    iso: Optional[int] = None
-    focal_length: Optional[str] = None
-    lens_model: Optional[str] = None
-    raw_exif: Optional[Dict[str, Any]] = None
+    camera_model: str | None = None
+    date_taken: datetime.datetime | None = None
+    f_number: float | None = None
+    exposure_time: str | None = None
+    iso: int | None = None
+    focal_length: str | None = None
+    lens_model: str | None = None
+    raw_exif: dict[str, Any] | None = None
+
 
 class MetadataCreate(MetadataBase):
     pass
 
+
 class Metadata(MetadataBase):
     id: int
-    location: Optional[Location] = None
+    location: Location | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- Image Schemas ---
 class ImageBase(BaseModel):
@@ -76,7 +85,7 @@ class ImageBase(BaseModel):
     upload_date: datetime.datetime
     resolution: str
     image_size: int
-    mimetype: Optional[str] = None
+    mimetype: str | None = None
 
 
 class ImageCreate(ImageBase):
@@ -84,22 +93,23 @@ class ImageCreate(ImageBase):
 
 
 class ImageUpdate(BaseModel):
-    filepath: Optional[str] = None
-    filename: Optional[str] = None
-    resolution: Optional[str] = None
-    image_size: Optional[int] = None
-    mimetype: Optional[str] = None
-    status: Optional[str] = None
+    filepath: str | None = None
+    filename: str | None = None
+    resolution: str | None = None
+    image_size: int | None = None
+    mimetype: str | None = None
+    status: str | None = None
+
 
 # This is the main schema for reading an image, includes nested data
 class Image(ImageBase):
     id: int
-    details: Optional[Metadata] = None
-    tags: List[Tag] = []
-    albums: List[AlbumBase] = []
+    details: Metadata | None = None
+    tags: list[Tag] = []
+    albums: list[AlbumBase] = []
     is_favorite: bool = False
     status: str = "processing"
-    phash: Optional[str] = None
+    phash: str | None = None
 
     @computed_field
     @property
@@ -116,7 +126,7 @@ class Image(ImageBase):
     def large_url(self) -> str:
         return storage.display_url(self.filename)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 Album.model_rebuild()

@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
 
 from .. import crud, schemas
 from ..database import get_db
@@ -10,7 +9,8 @@ router = APIRouter(
     tags=["duplicates"],
 )
 
-@router.get("", response_model=List[List[schemas.Image]])
+
+@router.get("", response_model=list[list[schemas.Image]])
 def get_duplicate_image_groups(db: Session = Depends(get_db)):
     """
     Returns groups of images that are considered duplicates (based on pHash).
