@@ -1,16 +1,14 @@
+# Run PhotoStack locally: docker compose up --build, then open http://localhost:8000
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: photoview-db
-    env_file: .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  photostack:
+    build: .
     ports:
-      - "5432:5432"
+      - "8000:8000"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - photostack_data:/data  # database + uploads survive restarts
+    environment:
+      DEMO_MODE: "false"
+      # GEMINI_API_KEY: ""  # optional AI tagging (image includes no AI extra by default)
 
 volumes:
-  db_data:
+  photostack_data:

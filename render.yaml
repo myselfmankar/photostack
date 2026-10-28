@@ -1,0 +1,21 @@
+# Read-only public demo on Render's free tier (Blueprint).
+# Render dashboard → New → Blueprint → pick this repo. Render reads this file.
+services:
+  - type: web
+    name: photostack
+    runtime: docker
+    plan: free            # 0.1 CPU, 512 MB; sleeps after ~15 min idle
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/config
+    autoDeployTrigger: commit
+    envVars:
+      # Read-only, seeded with demo-photos/ on every start (free disks are not persistent).
+      - key: DEMO_MODE
+        value: "true"
+      # Street addresses for the map. Needs outbound internet, which Render has.
+      - key: GEOCODING_ENABLED
+        value: "true"
+      # No GEMINI_API_KEY: AI tagging stays off on the demo.

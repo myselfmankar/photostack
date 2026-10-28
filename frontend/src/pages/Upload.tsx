@@ -1,322 +1,146 @@
-import { useCallback, useState } from 'react';
-import { Upload as UploadIcon, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { CheckCircle2, CircleAlert, ImagePlus, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Page } from '@/components/Page';
+import { cn } from '@/lib/utils';
 
-interface FileWithProgress {
+// Must match photostack/storage.py SUPPORTED_EXTENSIONS.
+const ACCEPTED = ['.jpg', '.jpeg', '.png', '.heic', '.heif', '.mp4', '.mov', '.m4v', '.webm'];
+const PARALLEL = 3;
+
+interface Item {
+  id: string;
   file: File;
   progress: number;
-  status: 'pending' | 'uploading' | 'done' | 'error';
+  status: 'waiting' | 'uploading' | 'done' | 'error';
   error?: string;
 }
 
+const isAccepted = (f: File) => ACCEPTED.some((ext) => f.name.toLowerCase().endsWith(ext));
+
+/** Drop files (or pick them) and they upload right away, a few at a time. */
 export function Upload() {
-  const [files, setFiles] = useState<FileWithProgress[]>([]);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const { toast } = useToast();
+  const [items, setItems] = useState<Item[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const queue = useRef<Item[]>([]);
+  const active = useRef(0);
+  const queryClient = useQueryClient();
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      const maxSize = 100 * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast({
-          description: 'File size must be less than 100MB',
-          variant: 'destructive',
+  const update = (id: string, change: Partial<Item>) =>
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...change } : i)));
+
+  const pump = () => {
+    while (active.current < PARALLEL && queue.current.length > 0) {
+      const item = queue.current.shift()!;
+      active.current++;
+      update(item.id, { status: 'uploading' });
+      apiClient
+        .uploadImageWithProgress(item.file, (progress) => update(item.id, { progress }))
+        .then(() => update(item.id, { status: 'done', progress: 100 }))
+        .catch((e: Error) => update(item.id, { status: 'error', error: e.message }))
+        .finally(() => {
+          active.current--;
+          if (active.current === 0 && queue.current.length === 0) queryClient.invalidateQueries();
+          pump();
         });
-        return;
-      }
+    }
+  };
 
-      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-      if (!validTypes.includes(file.type)) {
-        toast({
-          description: 'Only JPEG, PNG, WebP, and GIF files are allowed',
-          variant: 'destructive',
-        });
-        return;
-      }
+  const add = (files: FileList | null) => {
+    if (!files) return;
+    const added: Item[] = [...files].map((file) => ({
+      id: `${file.name}-${file.size}-${Math.random()}`,
+      file,
+      progress: 0,
+      ...(isAccepted(file)
+        ? { status: 'waiting' as const }
+        : { status: 'error' as const, error: 'Not supported (photos: JPG, PNG, HEIC; videos: MP4, MOV, WebM)' }),
+    }));
+    setItems((prev) => [...added, ...prev]);
+    queue.current.push(...added.filter((i) => i.status === 'waiting'));
+    pump();
+  };
 
-      setFiles((prev) => [...prev, { file, progress: 0, status: 'pending' }]);
-    },
-    [toast]
-  );
-
-  const handleUpload = useCallback(
-    async (index: number) => {
-      const fileItem = files[index];
-      if (!fileItem) return;
-
-      setFiles((prev) => {
-        const newFiles = [...prev];
-        newFiles[index] = { ...newFiles[index], status: 'uploading', progress: 0 };
-        return newFiles;
-      });
-
-      try {
-        await apiClient.uploadImageWithProgress(
-          fileItem.file,
-          (progress) => {
-            setFiles((prev) => {
-              const newFiles = [...prev];
-              newFiles[index] = { ...newFiles[index], progress };
-              return newFiles;
-            });
-          }
-        );
-        setFiles((prev) => {
-          const newFiles = [...prev];
-          newFiles[index] = { ...newFiles[index], status: 'done', progress: 100 };
-          return newFiles;
-        });
-        toast({ description: `${fileItem.file.name} uploaded successfully` });
-      } catch (error) {
-        setFiles((prev) => {
-          const newFiles = [...prev];
-          newFiles[index] = {
-            ...newFiles[index],
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Upload failed',
-          };
-          return newFiles;
-        });
-      }
-    },
-    [files, toast]
-  );
-
-  const handleUploadAll = useCallback(() => {
-    files.forEach((_, index) => {
-      if (files[index].status === 'pending') {
-        handleUpload(index);
-      }
-    });
-  }, [files, handleUpload]);
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragActive(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragActive(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragActive(false);
-      const droppedFiles = Array.from(e.dataTransfer.files);
-      droppedFiles.forEach(handleFile);
-    },
-    [handleFile]
-  );
-
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files) {
-        Array.from(e.target.files).forEach(handleFile);
-      }
-    },
-    [handleFile]
-  );
-
-  const pendingCount = files.filter((f) => f.status === 'pending').length;
-  const uploadingCount = files.filter((f) => f.status === 'uploading').length;
-  const doneCount = files.filter((f) => f.status === 'done').length;
-
-  // Calculate overall upload progress (0-100)
-  const overallProgress = files.length > 0
-    ? Math.round(files.reduce((sum, f) => sum + f.progress, 0) / files.length)
-    : 0;
-
-  const isUploading = uploadingCount > 0;
-  const allDone = files.length > 0 && doneCount === files.length;
+  const done = items.filter((i) => i.status === 'done').length;
+  const busy = items.some((i) => i.status === 'waiting' || i.status === 'uploading');
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold mb-2">Upload Images</h1>
-        <p className="text-neutral-400">
-          Upload photos to your gallery. Maximum 100MB per file.
-        </p>
-      </div>
+    <Page title="Upload" subtitle="Photos (JPG, PNG, HEIC) and videos (MP4, MOV, WebM). Dates and places are read automatically.">
+      <label
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          add(e.dataTransfer.files);
+        }}
+        className={cn(
+          'flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-colors',
+          dragging ? 'border-primary bg-accent' : 'hover:bg-muted'
+        )}
+      >
+        <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-accent text-accent-foreground">
+          <ImagePlus className="h-6 w-6" />
+        </div>
+        <p className="font-medium">Drop photos and videos here, or click to choose</p>
+        <p className="mt-1 text-sm text-muted-foreground">They upload straight away</p>
+        <input
+          type="file"
+          multiple
+          accept={[...ACCEPTED, 'image/heic', 'image/heif', 'video/*'].join(',')}
+          className="sr-only"
+          onChange={(e) => {
+            add(e.target.files);
+            e.target.value = '';
+          }}
+        />
+      </label>
 
-      <div className="mb-8">
-        <label
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={cn(
-            'relative block px-6 py-12 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-300 overflow-hidden',
-            isDragActive
-              ? 'border-blue-500 bg-blue-500/10'
-              : allDone
-                ? 'border-green-500 bg-green-500/5'
-                : 'border-neutral-700 bg-neutral-900/50 hover:border-neutral-600'
-          )}
-        >
-          {/* Filling Glass Effect */}
-          <div
-            className={cn(
-              'absolute inset-0 transition-all duration-500 ease-out pointer-events-none',
-              isUploading || allDone ? 'opacity-100' : 'opacity-0'
-            )}
-            style={{
-              background: allDone
-                ? 'linear-gradient(to top, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.08))'
-                : 'linear-gradient(to top, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05))',
-              height: `${overallProgress}%`,
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            {/* Shimmer effect while uploading */}
-            {isUploading && (
-              <div
-                className="absolute inset-0 opacity-30"
-                style={{
-                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
-                  animation: 'shimmer 2s infinite',
-                }}
-              />
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="relative z-10 flex flex-col items-center justify-center text-center">
-            <UploadIcon className={cn(
-              "h-10 w-10 mb-3 transition-colors",
-              allDone ? "text-green-500" : "text-neutral-500"
-            )} />
-
-            {/* Show progress when uploading */}
-            {isUploading && (
-              <div className="mb-3">
-                <p className="text-4xl font-bold text-green-400 mb-1">
-                  {overallProgress}%
-                </p>
-                <p className="text-sm text-neutral-400">
-                  Uploading {uploadingCount} of {files.length} files...
-                </p>
-              </div>
-            )}
-
-            {/* Show success message when all done */}
-            {allDone && !isUploading && (
-              <div className="mb-3">
-                <p className="text-2xl font-bold text-green-400 mb-1">
-                  ✓ Upload Complete!
-                </p>
-                <p className="text-sm text-neutral-400">
-                  {files.length} file{files.length !== 1 ? 's' : ''} uploaded successfully
-                </p>
-              </div>
-            )}
-
-            {/* Default state */}
-            {!isUploading && !allDone && (
-              <>
-                <p className="text-lg font-medium mb-1">Drag and drop images here</p>
-                <p className="text-sm text-neutral-400 mb-4">or click to browse</p>
-              </>
-            )}
-
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleInputChange}
-              className="hidden"
-            />
-          </div>
-        </label>
-
-        {/* Add shimmer animation keyframes */}
-        <style>{`
-          @keyframes shimmer {
-            0% {
-              transform: translateX(-100%);
-            }
-            100% {
-              transform: translateX(100%);
-            }
-          }
-        `}</style>
-      </div>
-
-      {files.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold mb-1">Upload Queue</h2>
-              <p className="text-sm text-neutral-400">
-                {doneCount} done · {uploadingCount} uploading · {pendingCount} pending
-              </p>
-            </div>
-            {pendingCount > 0 && (
-              <Button onClick={handleUploadAll} disabled={uploadingCount > 0}>
-                Upload All
+      {items.length > 0 && (
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {busy ? `Uploading… ${done} of ${items.length} done` : `${done} of ${items.length} uploaded`}
+            </p>
+            {!busy && done > 0 && (
+              <Button asChild size="sm" className="rounded-full">
+                <Link to="/">View photos</Link>
               </Button>
             )}
           </div>
-
-          <div className="space-y-3">
-            {files.map((fileItem, index) => (
-              <div key={index} className="p-4 rounded-lg bg-neutral-900 border border-neutral-800">
-                <div className="flex items-start gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-medium text-sm truncate">{fileItem.file.name}</p>
-                      <p className="text-xs text-neutral-500">
-                        {(fileItem.file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+          <ul className="divide-y rounded-xl border">
+            {items.map((item) => (
+              <li key={item.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                {item.status === 'done' ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+                ) : item.status === 'error' ? (
+                  <CircleAlert className="h-5 w-5 shrink-0 text-destructive" />
+                ) : (
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">{item.file.name}</p>
+                  {item.error && <p className="text-xs text-destructive">{item.error}</p>}
+                  {item.status === 'uploading' && (
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${item.progress}%` }} />
                     </div>
-                    <Progress value={fileItem.progress} className="h-2" />
-                    {fileItem.status === 'error' && (
-                      <p className="text-xs text-red-500 mt-1">{fileItem.error}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {fileItem.status === 'pending' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleUpload(index)}
-                      >
-                        Upload
-                      </Button>
-                    )}
-                    {fileItem.status === 'done' && (
-                      <span className="text-xs text-green-500">✓ Done</span>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setFiles((prev) => prev.filter((_, i) => i !== index));
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  )}
                 </div>
-              </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {(item.file.size / 1024 / 1024).toFixed(1)} MB
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
-
-      {files.length === 0 && (
-        <div className="text-center py-12 text-neutral-500">
-          No files selected yet
-        </div>
-      )}
-    </div>
+    </Page>
   );
 }

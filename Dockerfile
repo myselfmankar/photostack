@@ -1,24 +1,43 @@
-FROM python:3.10-slim-bookworm
+# One image, one process: FastAPI serves both the API and the built React app.
+
+# --- Stage 1: build the frontend -------------------------------------------------
+FROM node:20-alpine AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# --- Stage 2: Python runtime -----------------------------------------------------
+FROM python:3.12-slim-bookworm
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /bin/uv
+
+# ffmpeg gives videos thumbnails, duration, date and GPS (~80 MB).
+# Build with --build-arg WITH_FFMPEG=false to leave it out; videos still play.
+ARG WITH_FFMPEG=true
+RUN if [ "$WITH_FFMPEG" = "true" ]; then \
+      apt-get update \
+      && apt-get install -y --no-install-recommends ffmpeg \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
 
 WORKDIR /app
-
-# Set environment
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    # Everything that changes at runtime lives in /data (mount a volume there).
+    DATABASE_URL=sqlite:////data/photostack.db \
+    UPLOADS_DIR=/data/uploads
 
-# Install dependencies
-COPY requirements.txt ./
-RUN pip install uv
-RUN uv pip install --no-cache-dir -r requirements.txt --system
+# Dependencies first, so this layer is cached between code changes.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --extra postgres
 
-# Copy project
-COPY . .
-
-# Ensure folders for uploads and thumbnails
-RUN mkdir -p /app/uploads /app/uploads/thumbnails && \
-    chmod -R 755 /app/uploads
+COPY photostack ./photostack
+COPY --from=frontend /frontend/dist ./frontend/dist
+COPY demo-photos ./demo-photos
 
 EXPOSE 8000
-
-# Use uvicorn to run the FastAPI app. Remove --reload in production.
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+COPY scripts/start.sh ./start.sh
+# Seeds demo photos into an empty library, then starts uvicorn (see scripts/start.sh).
+CMD ["sh", "./start.sh"]

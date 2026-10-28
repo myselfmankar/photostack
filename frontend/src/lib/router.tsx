@@ -1,18 +1,20 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Gallery } from '@/pages/Gallery';
 import { Albums } from '@/pages/Albums';
 import { AlbumDetail } from '@/pages/AlbumDetail';
-import { MapView } from '@/pages/MapView';
+import { CustomAlbum } from '@/pages/CustomAlbum';
 import { Favorites } from '@/pages/Favorites';
 import { Search } from '@/pages/Search';
 import { Upload } from '@/pages/Upload';
-import { Stats } from '@/pages/Stats';
-import { Suggestions } from '@/pages/Suggestions';
-import { About } from '@/pages/About';
+import { Library } from '@/pages/Library';
+import { LibraryIssue } from '@/pages/LibraryIssue';
 import { ImageDetail } from '@/pages/ImageDetail';
 import { Duplicates } from '@/pages/Duplicates';
-import { Settings } from '@/pages/Settings';
+
+// The map pulls in Leaflet (~300 KB), so it loads only when the Map page is opened.
+const MapView = lazy(() => import('@/pages/MapView').then((m) => ({ default: m.MapView })));
 
 export const router = createBrowserRouter([
   {
@@ -36,8 +38,16 @@ export const router = createBrowserRouter([
         element: <AlbumDetail />,
       },
       {
+        path: 'albums/:id',
+        element: <CustomAlbum />,
+      },
+      {
         path: 'map',
-        element: <MapView />,
+        element: (
+          <Suspense fallback={null}>
+            <MapView />
+          </Suspense>
+        ),
       },
       {
         path: 'favorites',
@@ -56,20 +66,12 @@ export const router = createBrowserRouter([
         element: <Upload />,
       },
       {
-        path: 'stats',
-        element: <Stats />,
+        path: 'library',
+        element: <Library />,
       },
       {
-        path: 'suggestions',
-        element: <Suggestions />,
-      },
-      {
-        path: 'about',
-        element: <About />,
-      },
-      {
-        path: 'settings',
-        element: <Settings />,
+        path: 'library/:issue',
+        element: <LibraryIssue />,
       },
     ],
   },

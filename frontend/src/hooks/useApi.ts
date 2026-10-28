@@ -1,174 +1,129 @@
-import { useMutation, useQuery, useInfiniteQuery } from '@tanstack/react-query';
+/**
+ * React Query hooks for every API call.
+ *
+ * Reads are cached by key. Every write refreshes all cached reads afterwards:
+ * a favorite or delete can change the gallery, an album, search results, the
+ * map and stats at once, and for a personal library refetching is cheap.
+ */
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import { Issue } from '@/types';
 
-const QUERY_KEYS = {
-  images: () => ['images'],
-  imagesList: (sortBy: string, filters: Record<string, any>) => ['images', 'list', sortBy, filters],
-  imagesFavorites: () => ['images', 'favorites'],
-  search: (query: string) => ['search', query],
-  albums: () => ['albums'],
-  albumSummary: () => ['albums', 'summary'],
-  albumImages: (year: number, month: number) => ['albums', year, month],
-  filters: () => ['filters'],
-  cameras: () => ['filters', 'cameras'],
-  locations: () => ['filters', 'locations'],
-  dates: () => ['filters', 'dates'],
-  map: () => ['map', 'data'],
-  stats: () => ['stats'],
-  suggestions: () => ['suggestions'],
-  image: (id: number) => ['image', id],
-  duplicates: () => ['duplicates'],
-};
+export interface ImageFilters {
+  camera?: string;
+  location?: string;
+  date?: string;
+  isFavorite?: boolean;
+  status?: string;
+  issue?: Issue;
+}
 
-export const useImages = (
-  sortBy: string = 'upload_date',
-  filters: {
-    camera?: string;
-    location?: string;
-    date?: string;
-    isFavorite?: boolean;
-    status?: string;
-  } = {},
-  enabled: boolean = true
-) => {
-  return useInfiniteQuery({
-    queryKey: QUERY_KEYS.imagesList(sortBy, filters),
-    queryFn: ({ pageParam = 0 }) =>
-      apiClient.images.list(pageParam, 20, sortBy, filters),
+const PAGE_SIZE = 60;
+
+// --- Reads --------------------------------------------------------------------
+
+export const useImages = (sortBy = 'upload_date', filters: ImageFilters = {}) =>
+  useInfiniteQuery({
+    queryKey: ['images', 'list', sortBy, filters],
+    queryFn: ({ pageParam }) => apiClient.images.list(pageParam, PAGE_SIZE, sortBy, filters),
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) =>
-      lastPage.length === 20 ? pages.length * 20 : undefined,
-    enabled,
+      lastPage.length === PAGE_SIZE ? pages.length * PAGE_SIZE : undefined,
   });
-};
 
-export const useImage = (id: number) => {
-  return useQuery({
-    queryKey: QUERY_KEYS.image(id),
+export const useImage = (id: number) =>
+  useQuery({
+    queryKey: ['images', 'detail', id],
     queryFn: () => apiClient.images.get(id),
-    enabled: !!id,
+    enabled: Number.isFinite(id),
   });
-};
 
-export const useUploadImage = () => {
-  return useMutation({
-    mutationFn: (file: File) => apiClient.uploadImage(file),
+export const useSearch = (query: string) =>
+  useQuery({
+    queryKey: ['search', query],
+    queryFn: () => apiClient.search.query(query),
+    enabled: query.trim().length > 0,
   });
-};
 
-export const useDeleteImage = () => {
-  return useMutation({
-    mutationFn: (id: number) => apiClient.images.delete(id),
-  });
-};
+export const useMonthAlbums = () =>
+  useQuery({ queryKey: ['albums', 'months'], queryFn: () => apiClient.albums.months() });
 
-export const useToggleFavorite = () => {
-  return useMutation({
-    mutationFn: (id: number) => apiClient.images.toggleFavorite(id),
+export const useMonthImages = (year: number, month: number) =>
+  useQuery({
+    queryKey: ['albums', 'months', year, month],
+    queryFn: () => apiClient.albums.monthImages(year, month),
   });
-};
 
-export const useSearchAI = (query: string, enabled: boolean = false) => {
-  return useQuery({
-    queryKey: QUERY_KEYS.search(query),
-    queryFn: () => apiClient.search.ai(query),
-    enabled: enabled && query.length > 0,
-  });
-};
+export const useAlbums = () =>
+  useQuery({ queryKey: ['albums', 'list'], queryFn: () => apiClient.albums.list() });
 
-export const useAlbumSummary = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.albumSummary(),
-    queryFn: () => apiClient.albums.summary(),
+export const useAlbum = (id: number) =>
+  useQuery({
+    queryKey: ['albums', 'detail', id],
+    queryFn: () => apiClient.albums.get(id),
+    enabled: Number.isFinite(id),
   });
-};
 
-export const useAlbumImages = (year: number, month: number) => {
-  return useQuery({
-    queryKey: QUERY_KEYS.albumImages(year, month),
-    queryFn: () => apiClient.albums.getImages(year, month),
-  });
-};
+export const useCameraFilters = () =>
+  useQuery({ queryKey: ['filters', 'cameras'], queryFn: () => apiClient.filters.cameras() });
 
-export const useCameraFilters = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.cameras(),
-    queryFn: () => apiClient.filters.cameras(),
-  });
-};
+export const useLocationFilters = () =>
+  useQuery({ queryKey: ['filters', 'locations'], queryFn: () => apiClient.filters.locations() });
 
-export const useLocationFilters = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.locations(),
-    queryFn: () => apiClient.filters.locations(),
-  });
-};
+export const useDateFilters = () =>
+  useQuery({ queryKey: ['filters', 'dates'], queryFn: () => apiClient.filters.dates() });
 
-export const useDateFilters = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.dates(),
-    queryFn: () => apiClient.filters.dates(),
-  });
-};
+export const useMapData = () =>
+  useQuery({ queryKey: ['map'], queryFn: () => apiClient.map.data() });
 
-export const useMapData = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.map(),
-    queryFn: () => apiClient.map.data(),
-  });
-};
+export const useLibraryHealth = () =>
+  useQuery({ queryKey: ['library'], queryFn: () => apiClient.library.health() });
 
-export const useStats = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.stats(),
-    queryFn: () => apiClient.stats.get(),
-  });
-};
+export const useDuplicateImageGroups = () =>
+  useQuery({ queryKey: ['duplicates'], queryFn: () => apiClient.duplicates.getGroups() });
 
-export const useAlbumSuggestions = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.suggestions(),
-    queryFn: () => apiClient.suggestions.albums(),
-  });
-};
+/** True on the public demo: uploads and photo deletes are switched off server-side. */
+export const useDemoMode = () =>
+  useQuery({ queryKey: ['config'], queryFn: () => apiClient.config(), staleTime: Infinity }).data
+    ?.demo_mode ?? false;
 
-export const useSearchSuggestions = () => {
-  return useQuery({
-    queryKey: ['search', 'suggestions'],
-    queryFn: () => apiClient.suggestions.search(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-};
+// --- Writes -------------------------------------------------------------------
 
-export const useCreateAlbum = () => {
-  return useMutation({
-    mutationFn: ({ name, description }: { name: string; description?: string }) =>
-      apiClient.albums.create(name, description),
-  });
-};
+function useWrite<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>) {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: fn, onSuccess: () => queryClient.invalidateQueries() });
+}
 
-export const useAddImagesToAlbum = () => {
-  return useMutation({
-    mutationFn: ({ albumId, imageIds }: { albumId: number; imageIds: number[] }) =>
-      apiClient.albums.addImages(albumId, imageIds),
-  });
-};
+export const useToggleFavorite = () => useWrite((id: number) => apiClient.images.toggleFavorite(id));
 
-export const useBatchDeleteImages = () => {
-  return useMutation({
-    mutationFn: (imageIds: number[]) => apiClient.batch.deleteImages(imageIds),
-  });
-};
+export const useReindex = () => useWrite((issue: Issue) => apiClient.library.reindex(issue));
 
-export const useBatchToggleFavoriteStatus = () => {
-  return useMutation({
-    mutationFn: (imageIds: number[]) => apiClient.batch.toggleFavoriteStatus(imageIds),
-  });
-};
+export const useDeleteImage = () => useWrite((id: number) => apiClient.images.delete(id));
 
-export const useDuplicateImageGroups = () => {
-  return useQuery({
-    queryKey: QUERY_KEYS.duplicates(),
-    queryFn: () => apiClient.duplicates.getGroups(),
-  });
-};
+export const useBatchDeleteImages = () =>
+  useWrite((ids: number[]) => apiClient.batch.deleteImages(ids));
+
+export const useBatchToggleFavoriteStatus = () =>
+  useWrite((ids: number[]) => apiClient.batch.toggleFavoriteStatus(ids));
+
+export const useCreateAlbum = () =>
+  useWrite(({ name, description }: { name: string; description?: string }) =>
+    apiClient.albums.create(name, description)
+  );
+
+export const useUpdateAlbum = () =>
+  useWrite(({ id, ...changes }: { id: number; name?: string; description?: string | null }) =>
+    apiClient.albums.update(id, changes)
+  );
+
+export const useDeleteAlbum = () => useWrite((id: number) => apiClient.albums.remove(id));
+
+export const useAddImagesToAlbum = () =>
+  useWrite(({ albumId, imageIds }: { albumId: number; imageIds: number[] }) =>
+    apiClient.albums.addImages(albumId, imageIds)
+  );
+
+export const useRemoveImagesFromAlbum = () =>
+  useWrite(({ albumId, imageIds }: { albumId: number; imageIds: number[] }) =>
+    apiClient.albums.removeImages(albumId, imageIds)
+  );

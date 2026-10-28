@@ -1,6 +1,8 @@
-import { Image, AIQuery, AlbumSummary, Stats, MapMarker } from '@/types';
+import { Album, AlbumSummary, Image, Issue, LibraryHealth, MapMarker, MonthAlbum } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Same origin by default: in production FastAPI serves this app and the API together,
+// and in `npm run dev` Vite proxies /api and /uploads to the backend (vite.config.ts).
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 export const apiClient = {
   async request<T>(
@@ -110,6 +112,7 @@ export const apiClient = {
         date?: string;
         isFavorite?: boolean;
         status?: string;
+        issue?: Issue;
       } = {}
     ) => {
       const params = new URLSearchParams({
@@ -122,6 +125,7 @@ export const apiClient = {
       if (filters.date) params.append('date', filters.date);
       if (filters.isFavorite !== undefined) params.append('is_favorite', filters.isFavorite.toString());
       if (filters.status) params.append('status', filters.status);
+      if (filters.issue) params.append('issue', filters.issue);
 
       return apiClient.request<Image[]>(`/api/v1/images?${params.toString()}`);
     },
@@ -143,34 +147,46 @@ export const apiClient = {
   },
 
   albums: {
-    summary: () =>
-      apiClient.request<AlbumSummary[]>('/api/v1/albums/summary'),
+    months: () => apiClient.request<MonthAlbum[]>('/api/v1/albums/months'),
 
-    getImages: (year: number, month: number) =>
-      apiClient.request<Image[]>(`/api/v1/albums/${year}/${month}`),
+    monthImages: (year: number, month: number) =>
+      apiClient.request<Image[]>(`/api/v1/albums/months/${year}/${month}`),
+
+    list: () => apiClient.request<AlbumSummary[]>('/api/v1/albums'),
+
+    get: (id: number) => apiClient.request<Album>(`/api/v1/albums/${id}`),
 
     create: (name: string, description?: string) =>
-      apiClient.request<any>('/api/v1/albums/', {
+      apiClient.request<Album>('/api/v1/albums', {
         method: 'POST',
         body: JSON.stringify({ name, description }),
       }),
 
-    addImages: (albumId: number, imageIds: number[]) =>
-      apiClient.request<any>(`/api/v1/albums/${albumId}/images`, {
+    update: (id: number, changes: { name?: string; description?: string | null }) =>
+      apiClient.request<Album>(`/api/v1/albums/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(changes),
+      }),
+
+    remove: (id: number) =>
+      apiClient.request<void>(`/api/v1/albums/${id}`, { method: 'DELETE' }),
+
+    addImages: (id: number, imageIds: number[]) =>
+      apiClient.request<Album>(`/api/v1/albums/${id}/images`, {
+        method: 'POST',
+        body: JSON.stringify(imageIds),
+      }),
+
+    removeImages: (id: number, imageIds: number[]) =>
+      apiClient.request<Album>(`/api/v1/albums/${id}/images/remove`, {
         method: 'POST',
         body: JSON.stringify(imageIds),
       }),
   },
 
   search: {
-    ai: (query: string) =>
-      apiClient.request<Image[]>(
-        '/api/v1/search/ai',
-        {
-          method: 'POST',
-          body: JSON.stringify({ query } as AIQuery),
-        }
-      ),
+    query: (q: string) =>
+      apiClient.request<Image[]>(`/api/v1/search?q=${encodeURIComponent(q)}`),
   },
 
   filters: {
@@ -189,23 +205,13 @@ export const apiClient = {
       apiClient.request<MapMarker[]>('/api/v1/map/data'),
   },
 
-  stats: {
-    get: () =>
-      apiClient.request<Stats>('/api/v1/dashboard-stats'),
+  library: {
+    health: () => apiClient.request<LibraryHealth>('/api/v1/library'),
+
+    reindex: (issue: Issue) =>
+      apiClient.request<{ queued: number }>(`/api/v1/library/reindex?issue=${issue}`, { method: 'POST' }),
   },
 
-  suggestions: {
-    albums: () =>
-      apiClient.request<string[]>('/api/v1/assist/albums'),
-
-    search: () =>
-      apiClient.request<string[]>('/api/v1/assist/search-terms'),
-  },
-
-  config: {
-    get: () =>
-      apiClient.request<{ api_url: string }>('/api/v1/config'),
-  },
 
   batch: {
     deleteImages: (imageIds: number[]) =>
@@ -220,6 +226,8 @@ export const apiClient = {
         { method: 'POST', body: JSON.stringify(imageIds) }
       ),
   },
+
+  config: () => apiClient.request<{ demo_mode: boolean }>('/api/v1/config'),
 
   duplicates: {
     getGroups: () =>
