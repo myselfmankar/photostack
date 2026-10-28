@@ -207,13 +207,21 @@ def update_image_status(db: Session, image_id: int, status: str):
     db.commit()
 
 
+def set_image_tags(db: Session, image_id: int, tags: list[str]) -> None:
+    """Replace an image's tags."""
+    db_image = get_image_by_id(db, image_id=image_id)
+    if not db_image:
+        return
+    db_image.tags = [get_or_create_tag(db, tag_name=name) for name in tags]
+    db.commit()
+
+
 def update_image_with_metadata(
     db: Session,
     image_id: int,
     image_update: schemas.ImageUpdate,
     metadata: schemas.MetadataCreate,
     location: schemas.LocationCreate | None = None,
-    tags: list[str] | None = None,
     phash: str | None = None,
 ):
     """
@@ -247,13 +255,6 @@ def update_image_with_metadata(
 
     # Link the new metadata to the image
     db_image.details = db_metadata
-
-    # Handle tags: clear existing and add the new ones
-    db_image.tags.clear()
-    if tags:
-        for tag_name in tags:
-            db_tag = get_or_create_tag(db, tag_name=tag_name)
-            db_image.tags.append(db_tag)
 
     db.add(db_image)
     db.commit()

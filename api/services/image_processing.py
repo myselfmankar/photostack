@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, storage
 from ..database import SessionLocal
-from . import geocoding
+from . import geocoding, tagger
 
 # Register HEIF opener with Pillow
 register_heif_opener()
@@ -39,11 +39,6 @@ def image_fingerprint(img: PILImage.Image) -> str:
         for col in range(8):
             bits = (bits << 1) | (px[row * 9 + col] > px[row * 9 + col + 1])
     return f"{bits:016x}"
-
-
-def generate_image_tags_sync(filepath: str) -> list[str]:
-    """AI tagging is disabled until the optional tagger lands (restructure step 6)."""
-    return []
 
 
 def _get_date_taken(tags):
@@ -83,10 +78,6 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
     try:
         filename = os.path.basename(filepath)
         is_heic = storage.needs_preview(filename)
-
-        # --- AI Tag Generation ---
-        # We do this first or in parallel ideally, but serial is fine.
-        ai_tags = generate_image_tags_sync(filepath)
 
         # --- Metadata & Preview Generation ---
         location_data = None
@@ -200,11 +191,19 @@ def process_and_save_image_metadata_sync(filepath: str, image_id: int, db: Sessi
             image_update=image_update_schema,
             metadata=metadata_schema,
             location=location_data,
-            tags=ai_tags,
             phash=phash,
         )
 
     except Exception as e:
         logger.error(f"Error processing image {filepath}: {e}", exc_info=True)
         crud.update_image_status(db, image_id=image_id, status="failed")
+        return
+
+    # Optional, and only after metadata is saved: a tagging failure never fails indexing.
+    if tagger.is_enabled():
+        try:
+            tags = tagger.suggest_tags(storage.thumbnail_path(filename))
+            crud.set_image_tags(db, image_id, tags)
+        except Exception:
+            logger.exception("Tagging failed for image %s", image_id)
     logger.info(f"Finished metadata processing for image ID {image_id}: {filepath}")

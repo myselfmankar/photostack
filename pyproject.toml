@@ -20,6 +20,9 @@ dependencies = [
 
 [project.optional-dependencies]
 postgres = ["psycopg2-binary>=2.9"]
+ai = [
+    "google-genai>=1.0",
+]
 
 [dependency-groups]
 dev = [
