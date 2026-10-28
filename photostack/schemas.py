@@ -45,7 +45,9 @@ class Image(BaseModel):
     filename: str
     upload_date: datetime.datetime
     status: str
+    media_type: str
     is_favorite: bool
+    duration: float | None
 
     width: int | None
     height: int | None

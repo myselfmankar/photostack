@@ -8,7 +8,7 @@ import { Page } from '@/components/Page';
 import { cn } from '@/lib/utils';
 
 // Must match photostack/storage.py SUPPORTED_EXTENSIONS.
-const ACCEPTED = ['.jpg', '.jpeg', '.png', '.heic', '.heif'];
+const ACCEPTED = ['.jpg', '.jpeg', '.png', '.heic', '.heif', '.mp4', '.mov', '.m4v', '.webm'];
 const PARALLEL = 3;
 
 interface Item {
@@ -57,7 +57,7 @@ export function Upload() {
       progress: 0,
       ...(isAccepted(file)
         ? { status: 'waiting' as const }
-        : { status: 'error' as const, error: 'Not a supported photo (JPG, PNG or HEIC)' }),
+        : { status: 'error' as const, error: 'Not supported (photos: JPG, PNG, HEIC; videos: MP4, MOV, WebM)' }),
     }));
     setItems((prev) => [...added, ...prev]);
     queue.current.push(...added.filter((i) => i.status === 'waiting'));
@@ -68,7 +68,7 @@ export function Upload() {
   const busy = items.some((i) => i.status === 'waiting' || i.status === 'uploading');
 
   return (
-    <Page title="Upload" subtitle="JPG, PNG and HEIC (iPhone) photos. Dates, places and cameras are read automatically.">
+    <Page title="Upload" subtitle="Photos (JPG, PNG, HEIC) and videos (MP4, MOV, WebM). Dates and places are read automatically.">
       <label
         onDragOver={(e) => {
           e.preventDefault();
@@ -88,12 +88,12 @@ export function Upload() {
         <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-accent text-accent-foreground">
           <ImagePlus className="h-6 w-6" />
         </div>
-        <p className="font-medium">Drop photos here, or click to choose</p>
+        <p className="font-medium">Drop photos and videos here, or click to choose</p>
         <p className="mt-1 text-sm text-muted-foreground">They upload straight away</p>
         <input
           type="file"
           multiple
-          accept={[...ACCEPTED, 'image/heic', 'image/heif'].join(',')}
+          accept={[...ACCEPTED, 'image/heic', 'image/heif', 'video/*'].join(',')}
           className="sr-only"
           onChange={(e) => {
             add(e.target.files);

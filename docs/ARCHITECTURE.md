@@ -13,6 +13,7 @@ FastAPI app (photostack/main.py)
    ├── routers/        HTTP endpoints: validate input, call crud, shape output
    ├── crud.py         every database query lives here
    ├── indexer.py      file -> database row (EXIF, thumbnails, fingerprint)
+   ├── video.py        videos: ffprobe metadata + one ffmpeg frame (optional)
    ├── integrity.py    file type, SHA-256, hidden data, editing software
    ├── storage.py      the only code that knows the uploads/ folder layout
    └── services/       optional outside calls: geocoding (Nominatim), AI tagger (Gemini)
@@ -92,6 +93,7 @@ failed before.
 | **Thumbnails as WebP files**, served statically | Generated once at index time; the browser loads them like any other file. |
 | **dHash fingerprint** for duplicates | ~10 lines on top of Pillow. Resized or re-saved copies get the same hash. Replaced `imagehash`, which pulled in numpy and scipy. |
 | **Plain keyword search** | Every word must match the filename, camera, address, or a tag. Predictable, and explainable in one sentence. |
+| **Videos via the ffmpeg command line, never converted** | `ffprobe` gives size, duration, date and GPS; one `ffmpeg` frame becomes the thumbnail. The original file is played as-is. Converting would take minutes per video. If a browser can't decode a format (often iPhone HEVC), the viewer offers a download. Without ffmpeg installed, videos are still stored and playable, just without thumbnails. |
 | **AI only as an optional plugin** | The tagger is off without an API key, sends just the small thumbnail, and runs after the photo is saved, so it can never break indexing. |
 | **`storage.py` owns the folder layout** | URLs and paths for originals, thumbnails and previews come from one place, so delete and serve can't disagree. |
 
@@ -105,6 +107,7 @@ failed before.
 | `photostack/schemas.py` | API response and request shapes (Pydantic). |
 | `photostack/crud.py` | All queries: list/filter/search, albums, duplicates, stats. |
 | `photostack/indexer.py` | Reading a photo and storing what's in it. |
+| `photostack/video.py` | ffprobe/ffmpeg calls for video metadata and thumbnails. |
 | `photostack/integrity.py` | Byte-level checks used at upload and index time. |
 | `photostack/storage.py` | Where files live and their URLs. |
 | `photostack/routers/` | One file per resource: images, albums, search, map, filters, stats, duplicates, batch. |

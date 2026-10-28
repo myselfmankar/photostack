@@ -15,28 +15,41 @@ EDITORS = ("photoshop", "lightroom", "gimp", "affinity", "pixelmator", "snapseed
            "paint.net", "pixlr", "canva", "luminar", "capture one")  # fmt: skip
 
 _HEIF_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
+WEBM_MAGIC = bytes([0x1A, 0x45, 0xDF, 0xA3])  # Matroska/WebM header
+_EXTENSION_TYPES = {
+    ".jpg": "jpeg", ".jpeg": "jpeg", ".png": "png", ".heic": "heif", ".heif": "heif",
+    ".mp4": "video", ".mov": "video", ".m4v": "video", ".webm": "video",
+}  # fmt: skip
 
 
 def real_type(head: bytes) -> str | None:
-    """'jpeg' | 'png' | 'heif' from the file signature, or None if it's none of them."""
+    """'jpeg' | 'png' | 'heif' | 'video' from the file signature, or None."""
     if head.startswith(b"\xff\xd8\xff"):
         return "jpeg"
     if head.startswith(b"\x89PNG\r\n\x1a\n"):
         return "png"
-    if head[4:8] == b"ftyp" and head[8:12] in _HEIF_BRANDS:
-        return "heif"
+    if head[4:8] == b"ftyp":  # ISO media container: HEIF photo, or MP4/MOV video
+        return "heif" if head[8:12] in _HEIF_BRANDS else "video"
+    if head.startswith(WEBM_MAGIC):
+        return "video"
     return None
 
 
 def extension_type(filename: str) -> str | None:
-    ext = Path(filename).suffix.lower()
-    return {".jpg": "jpeg", ".jpeg": "jpeg", ".png": "png", ".heic": "heif", ".heif": "heif"}.get(
-        ext
-    )
+    return _EXTENSION_TYPES.get(Path(filename).suffix.lower())
 
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    """Like sha256(), reading in chunks so large videos don't load into memory."""
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        while chunk := f.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def trailing_bytes(data: bytes) -> int:

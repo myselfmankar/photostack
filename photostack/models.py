@@ -35,12 +35,14 @@ class Image(Base):
     upload_date: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now)
     # processing -> completed | failed
     status: Mapped[str] = mapped_column(default="processing", index=True)
+    media_type: Mapped[str] = mapped_column(default="photo")  # photo | video
     is_favorite: Mapped[bool] = mapped_column(default=False)
 
     # Filled in by the indexer.
     width: Mapped[int | None]
     height: Mapped[int | None]
     image_size: Mapped[int | None]  # bytes
+    duration: Mapped[float | None]  # seconds, videos only
     fingerprint: Mapped[str | None] = mapped_column(index=True)  # dHash, for duplicates
 
     # Integrity (see integrity.py)

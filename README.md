@@ -13,6 +13,7 @@ yourself.
 
 - **Timeline**: every photo, grouped by day, keeping its real shape (portrait stays portrait)
 - **Reads your photos**: date, camera, lens, exposure and GPS from EXIF; iPhone HEIC included
+- **Videos**: MP4, MOV and WebM with thumbnails, duration, date and place (needs ffmpeg; included in the Docker image)
 - **Albums**: your own albums, plus automatic month albums
 - **Map**: photos on a map as thumbnails, with street addresses (OpenStreetMap)
 - **Search**: by place, camera, tag or file name
@@ -31,7 +32,7 @@ docker compose up --build
 
 Open http://localhost:8000. Photos and the database live in the `photostack_data` volume.
 
-**For development** (needs [uv](https://docs.astral.sh/uv/) and Node 20+):
+**For development** (needs [uv](https://docs.astral.sh/uv/), Node 20+, and optionally [ffmpeg](https://ffmpeg.org/download.html) for video thumbnails):
 
 ```bash
 uv sync

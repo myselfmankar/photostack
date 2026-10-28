@@ -12,6 +12,15 @@ RUN npm run build
 FROM python:3.12-slim-bookworm
 COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /bin/uv
 
+# ffmpeg gives videos thumbnails, duration, date and GPS (~80 MB).
+# Build with --build-arg WITH_FFMPEG=false to leave it out; videos still play.
+ARG WITH_FFMPEG=true
+RUN if [ "$WITH_FFMPEG" = "true" ]; then \
+      apt-get update \
+      && apt-get install -y --no-install-recommends ffmpeg \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
+
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

@@ -16,7 +16,10 @@ export interface Image {
   filename: string;
   upload_date: string;
   status: ImageStatus;
+  media_type: 'photo' | 'video';
   is_favorite: boolean;
+  /** Seconds; videos only, and only when the server has ffmpeg. */
+  duration: number | null;
 
   width: number | null;
   height: number | null;

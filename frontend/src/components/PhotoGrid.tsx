@@ -1,10 +1,14 @@
 import { format, isThisYear, parseISO } from 'date-fns';
-import { Check, Heart, Loader2, TriangleAlert } from 'lucide-react';
+import { Check, Film, Heart, Loader2, Play, TriangleAlert } from 'lucide-react';
 import { Image } from '@/types';
 import { cn } from '@/lib/utils';
 
 /** The date a photo belongs to in the timeline: when it was taken, else when uploaded. */
 export const photoDate = (img: Image) => img.date_taken ?? img.upload_date;
+
+/** 75 -> "1:15" */
+export const formatDuration = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
 
 function dayLabel(day: string) {
   const date = parseISO(day);
@@ -80,7 +84,12 @@ function Tile({
   onToggleFavorite,
   justify = false,
 }: Omit<PhotoGridProps, 'images' | 'byDay'> & { image: Image; selecting: boolean; justify?: boolean }) {
-  const ratio = Math.min(Math.max((image.width ?? 1) / (image.height ?? 1), 0.5), 2.5);
+  const isVideo = image.media_type === 'video';
+  // Videos indexed without ffmpeg have no size or thumbnail: show them 16:9 with an icon.
+  const hasThumbnail = !isVideo || image.width !== null;
+  const ratio = image.width && image.height
+    ? Math.min(Math.max(image.width / image.height, 0.5), 2.5)
+    : isVideo ? 16 / 9 : 1;
   const isSelected = selected.has(image.id);
   const isReady = image.status === 'completed';
 
@@ -99,7 +108,12 @@ function Tile({
         className="absolute inset-0 h-full w-full focus:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-primary"
         aria-label={`Open ${image.filename}`}
       >
-        {isReady && (
+        {isReady && !hasThumbnail && (
+          <div className="grid h-full w-full place-items-center text-muted-foreground">
+            <Film className="h-8 w-8" />
+          </div>
+        )}
+        {isReady && hasThumbnail && (
           <img
             src={image.thumbnail_url}
             alt=""
@@ -111,6 +125,13 @@ function Tile({
           />
         )}
       </button>
+
+      {isVideo && isReady && (
+        <span className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white">
+          <Play className="h-3 w-3 fill-current" />
+          {image.duration ? formatDuration(image.duration) : 'Video'}
+        </span>
+      )}
 
       {image.status === 'processing' && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center text-muted-foreground">

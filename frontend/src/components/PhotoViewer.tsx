@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Film,
   FolderPlus,
   Heart,
   Info,
@@ -18,6 +19,7 @@ import {
 import { Image } from '@/types';
 import { cn } from '@/lib/utils';
 import { AddToAlbumDialog } from './AddToAlbumDialog';
+import { formatDuration } from './PhotoGrid';
 import { ConfirmDialog } from './ConfirmDialog';
 
 export interface ViewerActions {
@@ -126,13 +128,17 @@ export function PhotoViewer({
 
         {/* min-h-0 lets this flex child shrink, so tall photos fit instead of overflowing. */}
         <div className="flex min-h-0 flex-1 items-center justify-center p-4 pt-14">
-          <img
-            key={image.id}
-            src={image.full_url}
-            alt={image.filename}
-            className="max-h-full max-w-full object-contain"
-            style={{ backgroundImage: `url("${image.thumbnail_url}")`, backgroundSize: 'cover' }}
-          />
+          {image.media_type === 'video' ? (
+            <VideoPlayer key={image.id} image={image} />
+          ) : (
+            <img
+              key={image.id}
+              src={image.full_url}
+              alt={image.filename}
+              className="max-h-full max-w-full object-contain"
+              style={{ backgroundImage: `url("${image.thumbnail_url}")`, backgroundSize: 'cover' }}
+            />
+          )}
         </div>
 
         {hasPrev && (
@@ -169,6 +175,44 @@ export function PhotoViewer({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Plays the original file. Browsers can't all decode every format (iPhone HEVC
+ * often fails on Windows/Linux), so on error we offer a download instead of a
+ * broken player. Videos are never converted on the server.
+ */
+function VideoPlayer({ image }: { image: Image }) {
+  const [unsupported, setUnsupported] = useState(false);
+
+  if (unsupported) {
+    return (
+      <div className="max-w-sm text-center text-white">
+        <Film className="mx-auto mb-3 h-10 w-10 opacity-70" />
+        <p className="font-medium">This browser can't play this video format</p>
+        <p className="mt-1 text-sm text-white/70">It's probably HEVC, common on iPhones. Download it to watch.</p>
+        <a
+          href={image.full_url}
+          download={image.filename}
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-black"
+        >
+          <Download className="h-4 w-4" /> Download
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <video
+      src={image.full_url}
+      poster={image.width ? image.thumbnail_url : undefined}
+      controls
+      autoPlay
+      playsInline
+      onError={() => setUnsupported(true)}
+      className="max-h-full max-w-full"
+    />
   );
 }
 
@@ -215,6 +259,7 @@ function InfoPanel({ image, onClose }: { image: Image; onClose: () => void }) {
           <p className="text-muted-foreground">
             {[
               image.width && image.height && `${image.width} × ${image.height}`,
+              image.duration && formatDuration(image.duration),
               image.image_size && formatBytes(image.image_size),
             ]
               .filter(Boolean)

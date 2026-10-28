@@ -12,7 +12,9 @@ from pathlib import Path
 
 from .config import settings
 
-SUPPORTED_EXTENSIONS = (".png", ".jpg", ".jpeg", ".heic", ".heif")
+PHOTO_EXTENSIONS = (".png", ".jpg", ".jpeg", ".heic", ".heif")
+VIDEO_EXTENSIONS = (".mp4", ".mov", ".m4v", ".webm")
+SUPPORTED_EXTENSIONS = PHOTO_EXTENSIONS + VIDEO_EXTENSIONS
 NEEDS_PREVIEW = (".heic", ".heif")
 URL_PREFIX = "/uploads"
 
@@ -53,6 +55,10 @@ def is_supported(filename: str) -> bool:
     return filename.lower().endswith(SUPPORTED_EXTENSIONS)
 
 
+def is_video(filename: str) -> bool:
+    return filename.lower().endswith(VIDEO_EXTENSIONS)
+
+
 def needs_preview(filename: str) -> bool:
     return filename.lower().endswith(NEEDS_PREVIEW)
 
@@ -74,7 +80,7 @@ def thumbnail_url(filename: str) -> str:
 
 
 def display_url(filename: str) -> str:
-    """Full-size URL the browser can render: the original, or the WebP preview for HEIC."""
+    """Full-size URL for the browser: the original, or the WebP preview for HEIC."""
     if needs_preview(filename):
         return f"{URL_PREFIX}/previews/{Path(filename).stem}.webp"
     return f"{URL_PREFIX}/{filename}"

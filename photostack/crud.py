@@ -132,7 +132,8 @@ def batch_delete_images(db: Session, image_ids: list[int]) -> int:
 
 def create_placeholder_image(db: Session, filename: str) -> Image:
     """A row for a file that hasn't been indexed yet (status 'processing')."""
-    image = Image(filename=filename, status="processing")
+    media_type = "video" if storage.is_video(filename) else "photo"
+    image = Image(filename=filename, status="processing", media_type=media_type)
     db.add(image)
     db.commit()
     db.refresh(image)

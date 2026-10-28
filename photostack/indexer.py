@@ -20,7 +20,7 @@ from PIL import ImageOps
 from pillow_heif import register_heif_opener
 from sqlalchemy.orm import Session
 
-from . import crud, integrity, storage
+from . import crud, integrity, storage, video
 from .database import SessionLocal
 from .services import geocoding, tagger
 
@@ -150,21 +150,44 @@ def make_derivatives(path: Path) -> None:
             preview.save(storage.preview_path(path.name), "webp", quality=85)
 
 
+def read_video(path: Path) -> dict[str, Any]:
+    """Everything we store about a video, and its thumbnail (when ffmpeg is installed)."""
+    fields: dict[str, Any] = {
+        "media_type": "video",
+        "image_size": path.stat().st_size,
+        "sha256": integrity.sha256_file(path),
+    }
+    if not video.available():
+        return fields
+    fields |= video.probe(path)
+    # A frame a little way in: the very first frame is often black.
+    at = min(1.0, (fields["duration"] or 0) / 2)
+    with video.frame(path, at) as img:
+        fields["fingerprint"] = fingerprint(img)
+        thumb = img.convert("RGB")
+        thumb.thumbnail(THUMBNAIL_SIZE)
+        thumb.save(storage.thumbnail_path(path.name), "webp", quality=80)
+    return fields
+
+
 # --- Indexing into the database --------------------------------------------------
 
 
 def index_image(db: Session, image_id: int, filename: str) -> None:
     path = storage.original_path(filename)
     try:
-        fields = read_image(path)
-        make_derivatives(path)
+        if storage.is_video(filename):
+            fields = read_video(path)
+        else:
+            fields = read_image(path)
+            make_derivatives(path)
         crud.save_index_result(db, image_id, fields)
     except Exception:
         logger.exception("Indexing failed for %s", filename)
         crud.update_image_status(db, image_id, "failed")
         return
 
-    if tagger.is_enabled():
+    if tagger.is_enabled() and storage.thumbnail_path(filename).exists():
         try:
             crud.set_image_tags(db, image_id, tagger.suggest_tags(storage.thumbnail_path(filename)))
         except Exception:
