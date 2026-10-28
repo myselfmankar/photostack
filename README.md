@@ -1,74 +1,93 @@
-<div align="center">
-  <img src="favicon/android-chrome-192x192.png" width="80" alt="PhotoStack AI Logo">
-</div>
+# PhotoStack
 
-# PhotoStack AI: Browse Your Life in Pictures
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-8E75B2)](https://deepmind.google/technologies/gemini/)
+A self-hosted photo library. Drop in your photos and PhotoStack reads when and
+where they were taken, builds a timeline, groups them into albums, puts them on
+a map, and finds duplicates. Think a small, understandable Google Photos you run
+yourself.
 
-**PhotoStack AI** is an intelligent, self-hosted digital asset management system for the privacy-conscious. It uses state-of-the-art AI to tag, organize, and surface your memories automatically, without ever sending your data to the cloud for storage.
+**[Live demo →](https://photostack-demo.fly.dev)** (sample photos, read-only)
 
-<!-- <div align="center">
-  <img src="map_zoomout.png" alt="Map View" width="800" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-  <p><em>Explore your memories on an interactive map</em></p>
-</div> -->
+<!-- Add a screenshot once the demo photos are in: docs/screenshot.png -->
 
-## Feature Overview
+## Features
 
-**Our mission is to bring the power of Google Photos to your private server.** PhotoStack AI combines industrial-strength database design with modern AI understanding.
+- **Timeline**: every photo, grouped by day, keeping its real shape (portrait stays portrait)
+- **Reads your photos**: date, camera, lens, exposure and GPS from EXIF; iPhone HEIC included
+- **Albums**: your own albums, plus automatic month albums
+- **Map**: photos on a map as thumbnails, with street addresses (OpenStreetMap)
+- **Search**: by place, camera, tag or file name
+- **Duplicates**: finds copies even when resized or re-saved, keeps the original
+- **Integrity checks**: real file type, SHA-256, signs of editing, data hidden after the image
+- **Light and dark mode**, works on phones
+- **Optional AI tags**: off by default; with a Gemini key, photos get descriptive tags
 
-*   **🔍 Natural Language Search**: Ask "Show me photos of my dog on the beach" and get instant results.
-*   **🏷️ Automatic Tagging**: Google Gemini 2.0 Flash analyzes every image for objects, scenes, and emotions.
-*   **🗺️ Interactive Maps**: Visualize your journey with clustered markers and location history.
-*   **🔒 Privacy First**: Your photos never leave your server. AI analysis is performed transiently.
-*   **📱 Modern & Fast**: Built with React and FastAPI for a snappy, app-like experience on any device.
-*   **📸 Broad Support**: Handles HEIC, RAW, and standard formats seamlessly.
+## Run it
 
-## Getting Started
-
-You can run PhotoStack AI at home using Docker. It's designed to be simple to deploy.
+**Docker** (simplest):
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/yourusername/photostack-ai.git
-
-# 2. Set your API Key (Get one from ai.google.dev)
-echo "GEMINI_API_KEY=your_key_here" > .env
-
-# 3. Launch
-docker-compose up --build
+docker compose up --build
 ```
 
-Visit `http://localhost:8000` to start browsing.
+Open http://localhost:8000. Photos and the database live in the `photostack_data` volume.
 
-## Technical Architecture
+**For development** (needs [uv](https://docs.astral.sh/uv/) and Node 20+):
 
-PhotoStack AI is built for performance and scalability. Ideal for developers looking to understand modern AI integration.
+```bash
+uv sync
+npm --prefix frontend install
+npm --prefix frontend run build
+uv run uvicorn photostack.main:app --reload
+```
 
-| Component | Technology | Description |
-|-----------|------------|-------------|
-| **AI Engine** | Gemini 2.0 + LangChain | Multimodal understanding & structured output |
-| **Backend** | FastAPI | High-performance async Python framework |
-| **Frontend** | React + Vite | Reactive UI with TypeScript safety |
-| **Database** | PostgreSQL | Robust relational data storage |
-| **Search** | Semantic + Fuzzy | Two-tier search architecture for accuracy |
+You can also copy photos straight into `uploads/`; they're indexed at startup.
 
-> **Note for Recruiters/Developers:** This project serves as a comprehensive portfolio piece demonstrating full-stack architecture, AI integration patterns, and system design.
-> [View Architecture Docs ›](docs/architecture.html)
+### Settings
 
-## Support & Community
+All optional, via environment variables or a `.env` file (see `.env.example`):
 
-*   **Documentation**: [Read the Docs](docs/README.md)
-*   **Bug Reports**: [Open an Issue](https://github.com/yourusername/photostack-ai/issues)
-*   **Discussion**: [Join the Conversation](https://github.com/yourusername/photostack-ai/discussions)
+| Variable | Default | What it does |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./photostack.db` | Any SQLAlchemy URL; Postgres needs `uv sync --extra postgres` |
+| `UPLOADS_DIR` | `uploads` | Where photos, thumbnails and previews are stored |
+| `GEOCODING_ENABLED` | `true` | Look up street addresses for GPS positions |
+| `GEMINI_API_KEY` | unset | Turns on AI tagging (needs `uv sync --extra ai`). Sends 400px thumbnails to Google |
+| `DEMO_MODE` | `false` | Public demo: no uploads or deletes |
+
+## How it works
+
+FastAPI backend, React frontend, SQLite by default. Uploads return immediately;
+a background task reads EXIF, makes WebP thumbnails, fingerprints the image for
+duplicate detection, and then (optionally) geocodes and tags it.
+
+See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the data model, the
+upload flow, and why each design decision was made.
+
+```
+photostack/   backend: routers → crud → models; indexer, integrity, storage
+frontend/     React + TypeScript + Tailwind
+tests/        pytest, runs offline against SQLite
+```
+
+## Development
+
+```bash
+uv run pytest                          # backend tests
+uv run ruff check && uv run ruff format --check
+npm --prefix frontend run typecheck
+```
+
+## Deploying the demo
+
+The demo runs on [Fly.io](https://fly.io) with `DEMO_MODE=true`. Put sample
+photos in `demo-photos/` (read its README first: GPS locations become public), then:
+
+```bash
+fly launch --no-deploy --copy-config
+fly volumes create photostack_data --size 1
+fly deploy
+```
 
 ## License
 
-PhotoStack AI is open-source software licensed under the [MIT license](LICENSE).
-
----
-<div align="center">
-  <sub>Built with ❤️ by [Your Name] • Powered by Google Gemini</sub>
-</div>
+MIT
