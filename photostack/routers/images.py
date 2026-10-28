@@ -14,25 +14,32 @@ def upload_image(
     db: Session = Depends(get_db),
 ):
     """Save the file, create a 'processing' row, and index it in the background."""
-    filename = file.filename or ""
+    filename = storage.safe_filename(file.filename)
+    if filename is None:
+        raise HTTPException(status_code=400, detail="Invalid file name")
     if not storage.is_supported(filename):
-        raise HTTPException(
-            status_code=400,
-            detail="File type not supported. Please upload PNG, JPG, JPEG, HEIC, or HEIF",
-        )
-
-    existing = crud.get_image_by_filename(db, filename=filename)
-    if existing and existing.status == "completed":
-        return existing
+        raise HTTPException(status_code=400, detail="Unsupported file type")
 
     data = file.file.read()
     actual = integrity.real_type(data[:16])
     if actual is None or actual != integrity.extension_type(filename):
         raise HTTPException(status_code=400, detail="The file's contents don't match its extension")
+
     same = crud.get_image_by_sha256(db, integrity.sha256(data))
-    if same and same.filename != filename:
+    if same:
+        if same.filename == filename:
+            return same  # re-uploading the same file is a no-op
         raise HTTPException(
-            status_code=409, detail=f"This exact photo is already in the library as {same.filename}"
+            status_code=409, detail=f"This exact file is already in the library as {same.filename}"
+        )
+
+    # A different file with a name we already have (IMG_0001.jpg from two phones):
+    # keep both. Only a failed/unfinished row with this name is retried in place.
+    existing = crud.get_image_by_filename(db, filename)
+    if existing and existing.status == "completed":
+        filename = storage.unique_filename(
+            filename,
+            lambda n: storage.original_path(n).exists() or crud.get_image_by_filename(db, n),
         )
 
     storage.original_path(filename).write_bytes(data)

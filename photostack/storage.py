@@ -26,6 +26,29 @@ def ensure_dirs() -> None:
         folder.mkdir(parents=True, exist_ok=True)
 
 
+def safe_filename(raw: str | None) -> str | None:
+    """The bare file name from an upload, or None if it isn't usable.
+
+    Clients choose the name, so "../../etc/x.jpg" or a Windows path must never
+    become a path outside the uploads folder.
+    """
+    name = (raw or "").replace("\\", "/").rsplit("/", 1)[-1]
+    name = "".join(ch for ch in name if ch.isprintable()).strip()
+    if not name or name.startswith(".") or len(name) > 200:
+        return None
+    return name
+
+
+def unique_filename(name: str, taken) -> str:
+    """name, or "name (2).ext", "name (3).ext", ... : the first one taken() says is free."""
+    stem, ext = Path(name).stem, Path(name).suffix
+    candidate, n = name, 1
+    while taken(candidate):
+        n += 1
+        candidate = f"{stem} ({n}){ext}"
+    return candidate
+
+
 def is_supported(filename: str) -> bool:
     return filename.lower().endswith(SUPPORTED_EXTENSIONS)
 

@@ -38,9 +38,37 @@ def test_upload_rejects_unsupported_type(client):
     assert res.status_code == 400
 
 
-def test_reupload_returns_existing(client, library):
-    res = client.post("/api/v1/images", files={"file": ("geo.jpg", make_jpeg(), "image/jpeg")})
+def test_same_file_again_returns_existing(client, library):
+    data = make_jpeg(camera="TestCam", taken="2024:05:01 10:00:00", gps=(18, 73))
+    res = client.post("/api/v1/images", files={"file": ("geo.jpg", data, "image/jpeg")})
     assert res.json()["id"] == library["geo"]["id"]
+
+
+def test_different_photo_with_same_name_is_kept(client, library):
+    other = make_jpeg(color=(250, 250, 10))  # a different photo, also called geo.jpg
+    res = client.post("/api/v1/images", files={"file": ("geo.jpg", other, "image/jpeg")})
+    assert res.status_code == 201
+    assert res.json()["filename"] == "geo (2).jpg"
+    assert res.json()["id"] != library["geo"]["id"]
+    client.delete(f"/api/v1/images/{res.json()['id']}")
+
+
+@pytest.mark.parametrize(
+    "name", ["../../evil.jpg", "..\..\evil.jpg", "/etc/evil.jpg", "C:\Windows\evil.jpg"]
+)
+def test_upload_cannot_escape_uploads_folder(client, name, workdir):
+    data = make_jpeg(color=(1, 99, 1))
+    res = client.post("/api/v1/images", files={"file": (name, data, "image/jpeg")})
+    assert res.json()["filename"] == "evil.jpg"  # only the bare name is used
+    assert (workdir / "uploads" / "evil.jpg").exists()
+    assert not (workdir.parent / "evil.jpg").exists()
+    client.delete(f"/api/v1/images/{res.json()['id']}")
+
+
+@pytest.mark.parametrize("name", ["", ".hidden.jpg", "../", "x" * 300 + ".jpg"])
+def test_upload_rejects_unusable_names(client, name):
+    res = client.post("/api/v1/images", files={"file": (name, make_jpeg(), "image/jpeg")})
+    assert res.status_code in (400, 422)
 
 
 def test_list_and_filter(client, library):
