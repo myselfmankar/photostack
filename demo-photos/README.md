@@ -1,5 +1,8 @@
 # Demo photos
 
+The current set (31 photos + 1 duplicate, 8 cities) was fetched from Wikimedia Commons with
+`uv run python scripts/fetch_demo_photos.py`. Credits: [ATTRIBUTION.md](ATTRIBUTION.md).
+
 Photos in this folder are copied into the Docker image and indexed when the
 container starts. Used for the public demo (`DEMO_MODE=true`).
 
