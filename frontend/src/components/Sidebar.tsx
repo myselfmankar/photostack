@@ -1,71 +1,72 @@
-import { Link, useLocation } from 'react-router-dom';
-import {
-    Image as ImageIcon,
-    Calendar,
-    Map,
-    Heart,
-    Search,
-    BarChart3,
-    Copy, // Added Copy icon
-} from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { BarChart3, Copy, FolderOpen, Heart, Images, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+export const MAIN_NAV = [
+  { to: '/', label: 'Photos', icon: Images, end: true },
+  { to: '/albums', label: 'Albums', icon: FolderOpen },
+  { to: '/map', label: 'Map', icon: Map },
+  { to: '/favorites', label: 'Favorites', icon: Heart },
+];
+
+const LIBRARY_NAV = [
+  { to: '/duplicates', label: 'Duplicates', icon: Copy },
+  { to: '/stats', label: 'Statistics', icon: BarChart3 },
+];
+
+export function Logo() {
+  return (
+    <NavLink to="/" className="flex items-center gap-2.5 px-3 text-[17px] font-semibold tracking-tight">
+      <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden>
+        <rect width="32" height="32" rx="8" className="fill-primary" />
+        <rect x="7" y="11" width="18" height="14" rx="3" fill="white" opacity=".55" />
+        <rect x="10" y="7" width="18" height="14" rx="3" fill="white" />
+      </svg>
+      PhotoStack
+    </NavLink>
+  );
+}
+
+function NavItem({ to, label, icon: Icon, end, onClick }: (typeof MAIN_NAV)[number] & { onClick?: () => void }) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      onClick={onClick}
+      className={({ isActive }) =>
+        cn(
+          'flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-colors',
+          isActive
+            ? 'bg-accent text-accent-foreground'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        )
+      }
+    >
+      <Icon className="h-[18px] w-[18px]" />
+      {label}
+    </NavLink>
+  );
+}
+
 export function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
-    const location = useLocation();
-
-    const navItems = [
-        { icon: ImageIcon, label: 'Gallery', href: '/' },
-        { icon: Calendar, label: 'Albums', href: '/albums' },
-        { icon: Map, label: 'Map', href: '/map' },
-        { icon: Heart, label: 'Favorites', href: '/favorites' },
-        { icon: Copy, label: 'Duplicates', href: '/duplicates' }, // Added Duplicates
-        { icon: Search, label: 'Search', href: '/search' },
-        { icon: BarChart3, label: 'Stats', href: '/stats' },
-    ];
-
-    return (
-        <aside className="flex flex-col h-full bg-neutral-950 border-r border-neutral-800 lg:fixed lg:left-0 lg:top-0 lg:bottom-0 lg:w-64">
-            {/* Logo */}
-            <div className="h-16 flex items-center px-6 border-b border-neutral-800">
-                <Link to="/" className="flex items-center gap-3" onClick={onLinkClick}>
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <ImageIcon className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="font-semibold text-lg">PhotoVault</span>
-                </Link>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 px-3 py-4 space-y-1">
-                {navItems.map(({ icon: Icon, label, href }) => {
-                    const isActive = location.pathname === href;
-
-                    return (
-                        <Link
-                            key={href}
-                            to={href}
-                            className={cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium',
-                                isActive
-                                    ? 'bg-neutral-800 text-white'
-                                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-                            )}
-                            onClick={onLinkClick}
-                        >
-                            <Icon className="h-5 w-5" />
-                            <span>{label}</span>
-                        </Link>
-                    );
-                })}
-            </nav>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-neutral-800">
-                <div className="text-xs text-neutral-500 space-y-1">
-                    <div>AI-Powered DAM</div>
-                    <div className="text-neutral-600">v1.0.0</div>
-                </div>
-            </div>
-        </aside>
-    );
+  return (
+    <aside className="flex h-full w-60 flex-col gap-6 bg-background py-4 pr-3">
+      <div className="flex h-10 items-center">
+        <Logo />
+      </div>
+      <nav className="space-y-1">
+        {MAIN_NAV.map((item) => (
+          <NavItem key={item.to} {...item} onClick={onLinkClick} />
+        ))}
+      </nav>
+      <div>
+        <p className="mb-1 px-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">Library</p>
+        <nav className="space-y-1">
+          {LIBRARY_NAV.map((item) => (
+            <NavItem key={item.to} {...item} onClick={onLinkClick} />
+          ))}
+        </nav>
+      </div>
+    </aside>
+  );
 }

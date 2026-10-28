@@ -77,6 +77,7 @@ export interface MapMarker {
   id: number;
   latitude: number;
   longitude: number;
+  address: string | null;
   thumbnail_url?: string | null;
   filename: string;
 }

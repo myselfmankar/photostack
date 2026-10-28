@@ -1,31 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
-import {
-  useAlbum,
-  useDeleteAlbum,
-  useRemoveImagesFromAlbum,
-  useToggleFavorite,
-  useUpdateAlbum,
-} from '@/hooks/useApi';
-import { Image as ImageType } from '@/types';
-import { ImageCard } from '@/components/ImageCard';
-import { ImageDetailsModal } from '@/components/ImageDetailsModal';
-import { ImageSkeletonGrid } from '@/components/ImageSkeleton';
-import { MasonryGrid } from '@/components/MasonryGrid';
+import { ArrowLeft, FolderOpen, Pencil, Trash2 } from 'lucide-react';
+import { useAlbum, useDeleteAlbum, useRemoveImagesFromAlbum, useUpdateAlbum } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { EmptyState, GridSkeleton, Page } from '@/components/Page';
+import { PhotoBrowser } from '@/components/PhotoBrowser';
+
+const plural = (n: number) => `${n} photo${n === 1 ? '' : 's'}`;
 
 /** A user-created album: rename, delete, and remove photos (photos stay in the library). */
 export function CustomAlbum() {
@@ -35,28 +19,25 @@ export function CustomAlbum() {
   const updateAlbum = useUpdateAlbum();
   const deleteAlbum = useDeleteAlbum();
   const removeImages = useRemoveImagesFromAlbum();
-  const toggleFavorite = useToggleFavorite();
-
   const [editingName, setEditingName] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [openImage, setOpenImage] = useState<ImageType | null>(null);
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <ImageSkeletonGrid />
-      </div>
+      <Page title=" ">
+        <GridSkeleton />
+      </Page>
     );
   }
-
   if (isError || !album) {
     return (
-      <div className="py-24 text-center">
-        <p className="mb-4 text-lg">Album not found</p>
-        <Button asChild variant="outline">
-          <Link to="/albums">Back to albums</Link>
-        </Button>
-      </div>
+      <Page>
+        <EmptyState icon={FolderOpen} title="Album not found">
+          <Button asChild variant="outline" className="mt-4 rounded-full">
+            <Link to="/albums">Back to albums</Link>
+          </Button>
+        </EmptyState>
+      </Page>
     );
   }
 
@@ -72,17 +53,16 @@ export function CustomAlbum() {
     }
   };
 
-  const removeFromAlbum = async (imageId: number) => {
+  const remove = async (imageIds: number[]) => {
     try {
-      await removeImages.mutateAsync({ albumId: album.id, imageIds: [imageId] });
-      toast.success('Removed from album');
-      if (openImage?.id === imageId) setOpenImage(null);
+      await removeImages.mutateAsync({ albumId: album.id, imageIds });
+      toast.success(`Removed ${plural(imageIds.length)} from “${album.name}”`);
     } catch {
-      toast.error('Could not remove the photo');
+      toast.error('Could not remove photos');
     }
   };
 
-  const handleDeleteAlbum = async () => {
+  const handleDelete = async () => {
     try {
       await deleteAlbum.mutateAsync(album.id);
       toast.success(`Deleted “${album.name}”`);
@@ -92,95 +72,72 @@ export function CustomAlbum() {
     }
   };
 
-  const photoCount = `${album.images.length} photo${album.images.length === 1 ? '' : 's'}`;
+  const title =
+    editingName !== null ? (
+      <form onSubmit={saveName} className="flex max-w-md gap-2">
+        <Input
+          value={editingName}
+          onChange={(e) => setEditingName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && setEditingName(null)}
+          maxLength={100}
+          autoFocus
+          className="h-10 text-lg"
+        />
+        <Button type="submit" disabled={updateAlbum.isPending}>
+          Save
+        </Button>
+      </form>
+    ) : (
+      <span className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" asChild className="-ml-2 rounded-full">
+          <Link to="/albums" aria-label="Back to albums">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
+        {album.name}
+      </span>
+    );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <Button variant="ghost" size="sm" asChild className="-ml-2 mb-4">
-        <Link to="/albums">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Albums
-        </Link>
-      </Button>
-
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          {editingName !== null ? (
-            <form onSubmit={saveName} className="flex max-w-md gap-2">
-              <Input
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Escape' && setEditingName(null)}
-                maxLength={100}
-                autoFocus
-              />
-              <Button type="submit" disabled={updateAlbum.isPending}>
-                Save
-              </Button>
-            </form>
-          ) : (
-            <h1 className="truncate text-3xl font-semibold">{album.name}</h1>
-          )}
-          <p className="mt-1 text-neutral-400">{photoCount}</p>
-        </div>
-
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => setEditingName(album.name)}>
+    <Page
+      title={title}
+      subtitle={plural(album.images.length)}
+      actions={
+        <>
+          <Button variant="outline" size="sm" className="gap-2 rounded-full" onClick={() => setEditingName(album.name)}>
             <Pencil className="h-4 w-4" /> Rename
           </Button>
-          <Button variant="outline" size="sm" className="gap-2 text-red-500" onClick={() => setConfirmDelete(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 rounded-full text-destructive"
+            onClick={() => setConfirmDelete(true)}
+          >
             <Trash2 className="h-4 w-4" /> Delete album
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {album.images.length > 0 ? (
-        <MasonryGrid>
-          {album.images.map((image) => (
-            <ImageCard
-              key={image.id}
-              image={image}
-              onClick={() => setOpenImage(image)}
-              onFavoriteToggle={(id) => toggleFavorite.mutate(id)}
-              isFavorite={image.is_favorite}
-              onDelete={removeFromAlbum}
-              deleteLabel="Remove from album"
-            />
-          ))}
-        </MasonryGrid>
+        <PhotoBrowser images={album.images} remove={{ label: 'Remove from album', onRemove: remove }} />
       ) : (
-        <div className="rounded-lg border border-dashed border-neutral-800 py-16 text-center">
-          <p className="font-medium">This album is empty</p>
-          <p className="mt-1 text-sm text-neutral-500">
-            In the <Link to="/" className="underline">gallery</Link>, choose Select, pick photos, then “Add to album”.
-          </p>
-        </div>
+        <EmptyState icon={FolderOpen} title="This album is empty">
+          On the{' '}
+          <Link to="/" className="text-primary underline">
+            Photos
+          </Link>{' '}
+          page, tick the circle on a few photos, then choose “Add to album”.
+        </EmptyState>
       )}
 
-      <ImageDetailsModal
-        image={openImage}
-        isOpen={!!openImage}
-        onClose={() => setOpenImage(null)}
-        onFavoriteToggle={(id) => toggleFavorite.mutate(id)}
-        isFavorite={openImage?.is_favorite ?? false}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete “${album.name}”?`}
+        description={`Only the album is deleted. Its ${album.images.length === 1 ? 'photo stays' : 'photos stay'} in your library.`}
+        confirmLabel="Delete album"
+        onConfirm={handleDelete}
       />
-
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{album.name}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Only the album is deleted. Its {album.images.length === 1 ? 'photo stays' : 'photos stay'} in
-              your library.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAlbum} className="bg-red-600 hover:bg-red-700">
-              Delete album
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </Page>
   );
 }

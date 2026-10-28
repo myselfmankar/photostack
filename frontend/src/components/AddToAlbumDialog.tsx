@@ -81,17 +81,17 @@ export function AddToAlbumDialog({ imageIds, open, onOpenChange, onDone }: AddTo
                   type="button"
                   disabled={busy}
                   onClick={() => addTo(album.id, album.name)}
-                  className="w-full flex items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-neutral-800 disabled:opacity-50"
+                  className="w-full flex items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-muted disabled:opacity-50"
                 >
                   {album.cover_url ? (
                     <img src={album.cover_url} alt="" className="h-10 w-10 rounded object-cover" />
                   ) : (
-                    <div className="h-10 w-10 rounded bg-neutral-800 grid place-items-center">
-                      <FolderPlus className="h-4 w-4 text-neutral-500" />
+                    <div className="h-10 w-10 rounded bg-muted grid place-items-center">
+                      <FolderPlus className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
                   <span className="flex-1 truncate">{album.name}</span>
-                  <span className="text-xs text-neutral-500">{album.image_count}</span>
+                  <span className="text-xs text-muted-foreground">{album.image_count}</span>
                 </button>
               </li>
             ))}

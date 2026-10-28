@@ -1,18 +1,19 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Gallery } from '@/pages/Gallery';
 import { Albums } from '@/pages/Albums';
 import { AlbumDetail } from '@/pages/AlbumDetail';
 import { CustomAlbum } from '@/pages/CustomAlbum';
-import { MapView } from '@/pages/MapView';
 import { Favorites } from '@/pages/Favorites';
 import { Search } from '@/pages/Search';
 import { Upload } from '@/pages/Upload';
 import { Stats } from '@/pages/Stats';
-import { About } from '@/pages/About';
 import { ImageDetail } from '@/pages/ImageDetail';
 import { Duplicates } from '@/pages/Duplicates';
-import { Settings } from '@/pages/Settings';
+
+// The map pulls in Leaflet (~300 KB), so it loads only when the Map page is opened.
+const MapView = lazy(() => import('@/pages/MapView').then((m) => ({ default: m.MapView })));
 
 export const router = createBrowserRouter([
   {
@@ -41,7 +42,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'map',
-        element: <MapView />,
+        element: (
+          <Suspense fallback={null}>
+            <MapView />
+          </Suspense>
+        ),
       },
       {
         path: 'favorites',
@@ -62,14 +67,6 @@ export const router = createBrowserRouter([
       {
         path: 'stats',
         element: <Stats />,
-      },
-      {
-        path: 'about',
-        element: <About />,
-      },
-      {
-        path: 'settings',
-        element: <Settings />,
       },
     ],
   },

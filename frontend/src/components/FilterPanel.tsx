@@ -1,204 +1,108 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api';
+import { X } from 'lucide-react';
+import { useCameraFilters, useDateFilters, useLocationFilters } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { X, SlidersHorizontal } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export interface FilterState {
-    camera?: string;
-    location?: string;
-    date?: string;
-    sortBy: string;
-    isFavorite?: boolean;
-    status?: string;
+  sortBy: string;
+  camera?: string;
+  location?: string;
+  date?: string;
 }
 
-interface FilterPanelProps {
-    filters: FilterState;
-    onFilterChange: (filters: FilterState) => void;
-    onClear: () => void;
+export const SORTS = {
+  date_taken: 'Date taken (newest)',
+  date_taken_asc: 'Date taken (oldest)',
+  upload_date: 'Recently added',
+  filename: 'File name',
+} as const;
+
+const ALL = '__all__';
+
+function Filter({
+  value,
+  placeholder,
+  options,
+  onChange,
+  format = (v) => v,
+}: {
+  value?: string;
+  placeholder: string;
+  options?: string[];
+  onChange: (v?: string) => void;
+  format?: (v: string) => string;
+}) {
+  if (!options?.length) return null;
+  return (
+    <Select value={value ?? ALL} onValueChange={(v) => onChange(v === ALL ? undefined : v)}>
+      <SelectTrigger className="h-9 w-auto max-w-[220px] gap-2 rounded-full">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>{placeholder}</SelectItem>
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>
+            {format(o)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
-export function FilterPanel({ filters, onFilterChange, onClear }: FilterPanelProps) {
-    const { data: cameras, isLoading: camerasLoading } = useQuery<string[]>({
-        queryKey: ['filters', 'cameras'],
-        queryFn: () => apiClient.filters.cameras(),
-    });
+const monthLabel = (ym: string) => {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(y, m - 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+};
+// Addresses are long ("Mall, Road, Area, City, ..."); show the first two parts.
+const shortPlace = (a: string) => a.split(',').slice(0, 2).join(',');
 
-    const { data: locations, isLoading: locationsLoading } = useQuery<string[]>({
-        queryKey: ['filters', 'locations'],
-        queryFn: () => apiClient.filters.locations(),
-    });
+/** Sort + filter dropdowns for the Photos page. Filters with no options are hidden. */
+export function FilterPanel({ filters, onChange }: { filters: FilterState; onChange: (f: FilterState) => void }) {
+  const { data: cameras } = useCameraFilters();
+  const { data: places } = useLocationFilters();
+  const { data: months } = useDateFilters();
+  const active = filters.camera || filters.location || filters.date;
 
-    const { data: dates, isLoading: datesLoading } = useQuery<string[]>({
-        queryKey: ['filters', 'dates'],
-        queryFn: () => apiClient.filters.dates(),
-    });
-
-    const hasActiveFilters = filters.camera || filters.location || filters.date;
-
-    return (
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <SlidersHorizontal className="h-4 w-4 text-neutral-400" />
-                    <h3 className="font-semibold text-sm">Filters</h3>
-                </div>
-                {hasActiveFilters && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onClear}
-                        className="h-7 text-xs"
-                    >
-                        <X className="h-3 w-3 mr-1" />
-                        Clear
-                    </Button>
-                )}
-            </div>
-
-            {/* Sort By */}
-            <div className="space-y-2">
-                <Label className="text-xs text-neutral-400">Sort By</Label>
-                <Select
-                    value={filters.sortBy}
-                    onValueChange={(value) => onFilterChange({ ...filters, sortBy: value })}
-                >
-                    <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-neutral-800 border-neutral-700">
-                        <SelectItem value="upload_date">Upload Date (Newest)</SelectItem>
-                        <SelectItem value="upload_date_asc">Upload Date (Oldest)</SelectItem>
-                        <SelectItem value="date_taken">Date Taken (Newest)</SelectItem>
-                        <SelectItem value="date_taken_asc">Date Taken (Oldest)</SelectItem>
-                        <SelectItem value="filename">Filename (A-Z)</SelectItem>
-                        <SelectItem value="size">File Size (Largest)</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* Camera Filter */}
-            <div className="space-y-2">
-                <Label className="text-xs text-neutral-400">Camera</Label>
-                {camerasLoading ? (
-                    <Skeleton className="h-10 bg-neutral-800" />
-                ) : (
-                    <Select
-                        value={filters.camera || 'all'}
-                        onValueChange={(value) =>
-                            onFilterChange({ ...filters, camera: value === 'all' ? undefined : value })
-                        }
-                    >
-                        <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                            <SelectValue placeholder="All Cameras" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-neutral-800 border-neutral-700">
-                            <SelectItem value="all">All Cameras</SelectItem>
-                            {cameras?.map((camera) => (
-                                <SelectItem key={camera} value={camera}>
-                                    {camera}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
-            </div>
-
-            {/* Location Filter */}
-            <div className="space-y-2">
-                <Label className="text-xs text-neutral-400">Location</Label>
-                {locationsLoading ? (
-                    <Skeleton className="h-10 bg-neutral-800" />
-                ) : (
-                    <Select
-                        value={filters.location || 'all'}
-                        onValueChange={(value) =>
-                            onFilterChange({ ...filters, location: value === 'all' ? undefined : value })
-                        }
-                    >
-                        <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                            <SelectValue placeholder="All Locations" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-neutral-800 border-neutral-700">
-                            <SelectItem value="all">All Locations</SelectItem>
-                            {locations?.map((location) => (
-                                <SelectItem key={location} value={location}>
-                                    {location}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
-            </div>
-
-            {/* Date Filter */}
-            <div className="space-y-2">
-                <Label className="text-xs text-neutral-400">Date</Label>
-                {datesLoading ? (
-                    <Skeleton className="h-10 bg-neutral-800" />
-                ) : (
-                    <Select
-                        value={filters.date || 'all'}
-                        onValueChange={(value) =>
-                            onFilterChange({ ...filters, date: value === 'all' ? undefined : value })
-                        }
-                    >
-                        <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                            <SelectValue placeholder="All Dates" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-neutral-800 border-neutral-700">
-                            <SelectItem value="all">All Dates</SelectItem>
-                            {dates?.map((date) => (
-                                <SelectItem key={date} value={date}>
-                                    {date}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
-            </div>
-
-            {/* Status Filter */}
-            <div className="space-y-2">
-                <Label className="text-xs text-neutral-400">Processing Status</Label>
-                <Select
-                    value={filters.status || 'all'}
-                    onValueChange={(value) =>
-                        onFilterChange({ ...filters, status: value === 'all' ? undefined : value })
-                    }
-                >
-                    <SelectTrigger className="bg-neutral-800 border-neutral-700">
-                        <SelectValue placeholder="All Statuses" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-neutral-800 border-neutral-700">
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="completed">Ready</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* Favorite Filter */}
-            <div className="pt-2">
-                <Button
-                    variant={filters.isFavorite ? "default" : "outline"}
-                    className="w-full justify-start"
-                    onClick={() => onFilterChange({ ...filters, isFavorite: filters.isFavorite ? undefined : true })}
-                >
-                    <span className={filters.isFavorite ? "text-red-500 mr-2" : "text-neutral-400 mr-2"}>♥</span>
-                    {filters.isFavorite ? "Favorites Only" : "Show Favorites Only"}
-                </Button>
-            </div>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Select value={filters.sortBy} onValueChange={(sortBy) => onChange({ ...filters, sortBy })}>
+        <SelectTrigger className="h-9 w-auto gap-2 rounded-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {Object.entries(SORTS).map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Filter
+        value={filters.camera}
+        placeholder="All cameras"
+        options={cameras}
+        onChange={(camera) => onChange({ ...filters, camera })}
+      />
+      <Filter
+        value={filters.location}
+        placeholder="All places"
+        options={places}
+        format={shortPlace}
+        onChange={(location) => onChange({ ...filters, location })}
+      />
+      <Filter
+        value={filters.date}
+        placeholder="All months"
+        options={months}
+        format={monthLabel}
+        onChange={(date) => onChange({ ...filters, date })}
+      />
+      {active && (
+        <Button variant="ghost" size="sm" className="gap-1 rounded-full" onClick={() => onChange({ sortBy: filters.sortBy })}>
+          <X className="h-4 w-4" /> Clear
+        </Button>
+      )}
+    </div>
+  );
 }
