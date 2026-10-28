@@ -4,7 +4,7 @@
     {
       "name": "photostack",
       "runtimeExecutable": "uv",
-      "runtimeArgs": ["run", "--no-sync", "uvicorn", "api.main:app", "--port", "8000"],
+      "runtimeArgs": ["run", "--no-sync", "uvicorn", "photostack.main:app", "--port", "8000"],
       "port": 8000
     }
   ]

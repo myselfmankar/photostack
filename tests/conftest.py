@@ -30,7 +30,7 @@ def workdir(tmp_path_factory) -> Path:
 def client(workdir):
     from fastapi.testclient import TestClient
 
-    from api.main import app
+    from photostack.main import app
 
     # Not used as a context manager on purpose: that would run the startup
     # scan thread (and network geocoding). Background tasks still run.

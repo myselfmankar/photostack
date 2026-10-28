@@ -27,8 +27,10 @@ export function ImageDetailsModal({
 }: ImageDetailsModalProps) {
   if (!image) return null;
 
-  const largeUrl = image.large_url || image.medium_url || image.filepath;
-  const metadata = image.details;
+  const largeUrl = image.full_url;
+  const hasExif = Boolean(
+    image.camera_model || image.lens_model || image.f_number || image.iso || image.focal_length || image.exposure_time
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -94,46 +96,46 @@ export function ImageDetailsModal({
               </Button>
             </div>
 
-            {metadata && (
+            {hasExif && (
               <div>
                 <h3 className="text-sm font-semibold text-white mb-3">
                   Details
                 </h3>
                 <div className="space-y-2 text-xs">
-                  {metadata.camera_model && (
+                  {image.camera_model && (
                     <div className="flex justify-between">
                       <span className="text-neutral-400">Camera</span>
-                      <span className="text-neutral-200">{metadata.camera_model}</span>
+                      <span className="text-neutral-200">{image.camera_model}</span>
                     </div>
                   )}
-                  {metadata.lens_model && (
+                  {image.lens_model && (
                     <div className="flex justify-between">
                       <span className="text-neutral-400">Lens</span>
-                      <span className="text-neutral-200">{metadata.lens_model}</span>
+                      <span className="text-neutral-200">{image.lens_model}</span>
                     </div>
                   )}
-                  {metadata.f_number && (
+                  {image.f_number && (
                     <div className="flex justify-between">
                       <span className="text-neutral-400">Aperture</span>
-                      <span className="text-neutral-200">f/{metadata.f_number}</span>
+                      <span className="text-neutral-200">f/{image.f_number}</span>
                     </div>
                   )}
-                  {metadata.iso && (
+                  {image.iso && (
                     <div className="flex justify-between">
                       <span className="text-neutral-400">ISO</span>
-                      <span className="text-neutral-200">{metadata.iso}</span>
+                      <span className="text-neutral-200">{image.iso}</span>
                     </div>
                   )}
-                  {metadata.focal_length && (
+                  {image.focal_length && (
                     <div className="flex justify-between">
                       <span className="text-neutral-400">Focal Length</span>
-                      <span className="text-neutral-200">{metadata.focal_length}</span>
+                      <span className="text-neutral-200">{image.focal_length}</span>
                     </div>
                   )}
-                  {metadata.exposure_time && (
+                  {image.exposure_time && (
                     <div className="flex justify-between">
                       <span className="text-neutral-400">Shutter</span>
-                      <span className="text-neutral-200">{metadata.exposure_time}</span>
+                      <span className="text-neutral-200">{image.exposure_time}</span>
                     </div>
                   )}
                 </div>
@@ -181,12 +183,12 @@ export function ImageDetailsModal({
             <div className="text-xs text-neutral-500 pt-2 border-t border-neutral-800">
               <div className="flex justify-between mb-1">
                 <span>Resolution</span>
-                <span>{image.resolution}</span>
+                <span>{image.width && image.height ? `${image.width} × ${image.height}` : '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Size</span>
                 <span>
-                  {(image.image_size / 1024 / 1024).toFixed(2)} MB
+                  {image.image_size ? `${(image.image_size / 1024 / 1024).toFixed(2)} MB` : '—'}
                 </span>
               </div>
             </div>

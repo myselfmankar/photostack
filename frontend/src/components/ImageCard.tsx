@@ -36,7 +36,7 @@ export function ImageCard({
   onSelect,
 }: ImageCardProps) {
   // Use thumbnail for grid view (better performance)
-  const imageUrl = image.thumbnail_url || image.medium_url || image.filepath;
+  const imageUrl = image.thumbnail_url;
   const isProcessing = image.status === 'processing';
 
   const handleClick = () => {

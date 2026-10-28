@@ -1,9 +1,8 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from .. import crud, schemas, storage
+from .. import crud, indexer, schemas, storage
 from ..database import get_db
-from ..services import image_processing
 
 router = APIRouter(prefix="/api/v1/images", tags=["images"])
 
@@ -26,17 +25,10 @@ def upload_image(
     if existing and existing.status == "completed":
         return existing
 
-    path = storage.original_path(filename)
-    path.write_bytes(file.file.read())
-
-    if existing:  # a previous attempt failed or was interrupted: retry it
-        crud.update_image_status(db, image_id=existing.id, status="processing")
-        db_image = existing
-    else:
-        db_image = crud.create_placeholder_image(db, filename=filename, filepath=str(path))
-
-    background_tasks.add_task(image_processing.process_image_background, str(path), db_image.id)
-    return db_image
+    storage.original_path(filename).write_bytes(file.file.read())
+    image_id = indexer.queue_file(db, filename)
+    background_tasks.add_task(indexer.index_in_background, image_id, filename)
+    return crud.get_image_by_id(db, image_id)
 
 
 @router.get("", response_model=list[schemas.Image])

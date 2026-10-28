@@ -181,9 +181,9 @@ export function FilterPanel({ filters, onFilterChange, onClear }: FilterPanelPro
                     </SelectTrigger>
                     <SelectContent className="bg-neutral-800 border-neutral-700">
                         <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="ready">Ready</SelectItem>
+                        <SelectItem value="completed">Ready</SelectItem>
                         <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="error">Error</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
                     </SelectContent>
                 </Select>
             </div>

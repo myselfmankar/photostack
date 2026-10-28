@@ -9,7 +9,7 @@ from .conftest import make_jpeg
 
 @pytest.fixture
 def tagger(workdir):
-    from api.services import tagger
+    from photostack.services import tagger
 
     tagger._client.cache_clear()
     yield tagger

@@ -54,8 +54,7 @@ export function ImageDetail() {
         );
     }
 
-    const largeUrl = image.large_url || image.medium_url || image.filepath;
-    const metadata = image.details;
+    const largeUrl = image.full_url;
 
     return (
         <div className="min-h-screen bg-neutral-950">
@@ -141,41 +140,41 @@ export function ImageDetail() {
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <p className="text-neutral-500">Model</p>
-                                        <p>{metadata?.camera_model || 'Unknown'}</p>
+                                        <p>{image.camera_model || 'Unknown'}</p>
                                     </div>
                                     <div>
                                         <p className="text-neutral-500">Lens</p>
-                                        <p>{metadata?.lens_model || 'Unknown'}</p>
+                                        <p>{image.lens_model || 'Unknown'}</p>
                                     </div>
                                     <div>
                                         <p className="text-neutral-500">Aperture</p>
-                                        <p>{metadata?.f_number ? `f/${metadata.f_number}` : 'N/A'}</p>
+                                        <p>{image.f_number ? `f/${image.f_number}` : 'N/A'}</p>
                                     </div>
                                     <div>
                                         <p className="text-neutral-500">ISO</p>
-                                        <p>{metadata?.iso || 'N/A'}</p>
+                                        <p>{image.iso || 'N/A'}</p>
                                     </div>
                                     <div>
                                         <p className="text-neutral-500">Shutter</p>
-                                        <p>{metadata?.exposure_time || 'N/A'}</p>
+                                        <p>{image.exposure_time || 'N/A'}</p>
                                     </div>
                                     <div>
                                         <p className="text-neutral-500">Focal Length</p>
-                                        <p>{metadata?.focal_length || 'N/A'}</p>
+                                        <p>{image.focal_length || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Location */}
-                            {metadata?.location && (
+                            {image.latitude != null && image.longitude != null && (
                                 <div className="space-y-4 pt-4 border-t border-neutral-800">
                                     <h3 className="font-medium flex items-center gap-2">
                                         <MapPin className="h-4 w-4" />
                                         Location
                                     </h3>
-                                    <p className="text-sm">{metadata.location.address || 'Unknown location'}</p>
+                                    <p className="text-sm">{image.address || 'Looking up address…'}</p>
                                     <div className="text-xs text-neutral-500 font-mono">
-                                        {metadata.location.latitude.toFixed(6)}, {metadata.location.longitude.toFixed(6)}
+                                        {image.latitude.toFixed(6)}, {image.longitude.toFixed(6)}
                                     </div>
                                 </div>
                             )}

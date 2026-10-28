@@ -24,12 +24,11 @@ def library(upload):
 def test_upload_extracts_metadata(library):
     img = library["geo"]
     assert img["status"] == "completed"
-    assert img["resolution"] == "64x48"
-    assert img["details"]["camera_model"] == "TestCam"
-    assert img["details"]["date_taken"].startswith("2024-05-01")
-    loc = img["details"]["location"]
-    assert loc["latitude"] == pytest.approx(18)
-    assert loc["longitude"] == pytest.approx(73)
+    assert (img["width"], img["height"]) == (64, 48)
+    assert img["camera_model"] == "TestCam"
+    assert img["date_taken"].startswith("2024-05-01")
+    assert img["latitude"] == pytest.approx(18)
+    assert img["longitude"] == pytest.approx(73)
     assert img["thumbnail_url"] == "/uploads/thumbnails/geo.webp"
     assert os.path.exists("uploads/thumbnails/geo.webp")
 
@@ -53,6 +52,17 @@ def test_list_and_filter(client, library):
 
     by_date = client.get("/api/v1/images", params={"date": "2024-05"}).json()
     assert {i["filename"] for i in by_date} == {"geo.jpg", "geo_copy.jpg"}
+
+
+def test_sort_options(client, library):
+    def order(sort_by):
+        imgs = client.get("/api/v1/images", params={"sort_by": sort_by, "limit": 100}).json()
+        return [i["filename"] for i in imgs if i["filename"] in {"geo.jpg", "plain.jpg"}]
+
+    assert order("upload_date") == ["plain.jpg", "geo.jpg"]  # newest upload first
+    assert order("upload_date_asc") == ["geo.jpg", "plain.jpg"]
+    assert order("filename") == ["geo.jpg", "plain.jpg"]
+    assert order("date_taken_asc")[0] == "geo.jpg"  # only geo.jpg has a date taken
 
 
 def test_filter_options(client, library):

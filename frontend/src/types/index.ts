@@ -1,51 +1,45 @@
-export interface Location {
-  id: number;
-  latitude: number;
-  longitude: number;
-  address?: string | null;
-}
-
-export interface Metadata {
-  id: number;
-  camera_model?: string | null;
-  date_taken?: string | null;
-  f_number?: number | null;
-  exposure_time?: string | null;
-  iso?: number | null;
-  focal_length?: string | null;
-  lens_model?: string | null;
-  raw_exif?: Record<string, unknown> | null;
-  location?: Location | null;
-}
-
 export interface Tag {
   id: number;
   name: string;
 }
 
-export interface AlbumBase {
+export interface AlbumRef {
+  id: number;
   name: string;
   description?: string | null;
 }
 
+export type ImageStatus = 'processing' | 'completed' | 'failed';
+
 export interface Image {
   id: number;
   filename: string;
-  filepath: string;
   upload_date: string;
-  resolution: string;
-  image_size: number;
-  mimetype?: string | null;
-  details?: Metadata | null;
-  tags: Tag[];
-  albums: AlbumBase[];
+  status: ImageStatus;
   is_favorite: boolean;
-  thumbnail_url?: string | null;
-  medium_url?: string | null;
-  large_url?: string | null;
-  status: 'processing' | 'ready' | 'error';
-}
 
+  width: number | null;
+  height: number | null;
+  image_size: number | null;
+
+  date_taken: string | null;
+  camera_model: string | null;
+  lens_model: string | null;
+  f_number: number | null;
+  exposure_time: string | null;
+  iso: number | null;
+  focal_length: string | null;
+
+  latitude: number | null;
+  longitude: number | null;
+  address: string | null;
+
+  tags: Tag[];
+  albums: AlbumRef[];
+  thumbnail_url: string;
+  /** Full-size image the browser can display (WebP preview for HEIC). */
+  full_url: string;
+}
 
 export interface AlbumSummary {
   year: number;
