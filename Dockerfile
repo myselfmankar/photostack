@@ -38,8 +38,6 @@ COPY --from=frontend /frontend/dist ./frontend/dist
 COPY demo-photos ./demo-photos
 
 EXPOSE 8000
-# Seed demo photos into an empty library (no-op when the folder has only its README),
-# then start. The startup scan indexes whatever is in /data/uploads.
-CMD mkdir -p "$UPLOADS_DIR" \
-    && find demo-photos -maxdepth 1 -type f ! -name '*.md' -exec cp -n {} "$UPLOADS_DIR"/ \; \
-    && exec /app/.venv/bin/uvicorn photostack.main:app --host 0.0.0.0 --port 8000
+COPY scripts/start.sh ./start.sh
+# Seeds demo photos into an empty library, then starts uvicorn (see scripts/start.sh).
+CMD ["sh", "./start.sh"]
